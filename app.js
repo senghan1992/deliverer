@@ -33,7 +33,6 @@ app.use(fileUpload());
 app.use('/', indexRouter);
 app.use('/api/v1/orders', orderRouter);
 app.use('/api/v1/delivers', deliverRouter);
-// app.use('/api/v1/historys', historyRouter);
 app.use('/api/v1/users', usersRouter);
 
 // catch 404 and forward to error handler

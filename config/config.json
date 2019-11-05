@@ -11,7 +11,12 @@
     "password": "tmdghks1",
     "database": "deliverer",
     "host": "deliverer-db.c5gq5ysjyrwd.ap-northeast-2.rds.amazonaws.com",
-    "dialect": "mysql"
+    "dialect": "mysql",
+    "define": {
+      "charset": "utf8",
+      "collate": "utf8_general_ci",
+      "timestamps": true
+    }
   },
   "production": {
     "username": "root",

@@ -42,7 +42,7 @@ const Op = Sequelize.Op;
 // };
 // const basename = path.basename(__filename);
 const env = process.env.NODE_ENV || 'test';
-const config = require(__dirname + '/../config/config.json')[env];
+const config = require('../config/config.json')[env];
 const db = {};
 
 let sequelize;
@@ -57,7 +57,7 @@ sequelize = new Sequelize(
     dialect: 'mysql',
     logging: false,
     operatorsAliases: Op,
-  });
+});
 
 // fs
 //   .readdirSync(__dirname)

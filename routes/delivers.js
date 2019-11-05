@@ -13,7 +13,7 @@ router.get('/historys/:id', function(req, res) {
   });
 });
 
-// add deliver
+// 매칭하기
 router.post('/:id', (req,res) => {
   let params_id = req.params.id;
   let delivererId = req.body.delivererId;
