@@ -7,6 +7,11 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         comment: '매칭 된 운송자 id'
       },
+      requestId : {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        comment: '매칭 된 발송자 id'
+      },
       orderId : {
         type: DataTypes.INTEGER,
         allowNull: false,
@@ -33,9 +38,9 @@ module.exports = (sequelize, DataTypes) => {
         comment: '운송 시간'
       },
       delivererReview : {
-        type: DataTypes.BOOLEAN,
+        type: DataTypes.ENUM('T','F'),
         allowNull:true,
-        defaultValue : false,
+        defaultValue : 'F',
       }
   });
 }

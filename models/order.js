@@ -7,35 +7,15 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false,
             comment: '요청자 id'
         },
-        pickUpperAddrName: {
-            type: DataTypes.STRING(20),
+        pickUpAddrName: {
+            type: DataTypes.STRING(50),
             allowNull: false,
-            comment: 'tmap api pickup upperAddrName'
-        },
-        pickMiddleAddrName: {
-            type: DataTypes.STRING(20),
-            allowNull: false,
-            comment: 'tmap api pickup middleAddrName'
-        },
-        pickLowerAddrName: {
-            type: DataTypes.STRING(20),
-            allowNull: false,
-            comment: 'tmap api pickup lowerAddrName'
+            comment: 'kakao api pickup upperAddrName'
         },
         pickDetailAddrName: {
             type: DataTypes.STRING(50),
             allowNull: false,
             comment: '출발지 상세주소',
-        },
-        pickFirstNo: {
-            type: DataTypes.STRING(10),
-            allowNull: true,
-            comment: '지번 첫번째 숫자'
-        },
-        pickSecondNo: {
-            type: DataTypes.STRING(10),
-            allowNull: true,
-            comment: '지번 두번째 숫자'
         },
         pickLongitude: {
             type: DataTypes.STRING(50),
@@ -47,63 +27,43 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: true,
             comment: 'pickLatitude'
         },
-        destUpperAddrName: {
-            type: DataTypes.STRING(20),
+        destinationAddrName: {
+            type: DataTypes.STRING(50),
             allowNull: false,
-            comment: 'tmap api destination upperAddrName'
-        },
-        destMiddleAddrName: {
-            type: DataTypes.STRING(20),
-            allowNull: false,
-            comment: 'tmap api destination middleAddrName'
-        },
-        destLowerAddrName: {
-            type: DataTypes.STRING(20),
-            allowNull: false,
-            comment: 'tmap api destination lowerAddrName'
+            comment: 'kakao api destination upperAddrName'
         },
         destDetailAddrName: {
             type: DataTypes.STRING(50),
             allowNull: false,
             comment: '도착지 상세주소',
         },
-        destFirstNo: {
-            type: DataTypes.STRING(10),
-            allowNull: true,
-            comment: '지번 두번쨰 숫자'
-        },
-        destSecondNo: {
-            type: DataTypes.STRING(10),
-            allowNull: true,
-            comment: '지번 세번째 숫자'
-        },
         destLongitude: {
-          type: DataTypes.STRING(50),
-          allowNull: true,
-          comment: 'pickLongtitude'
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            comment: 'pickLongtitude'
         },
         destLatitude: {
-          type: DataTypes.STRING(50),
-          allowNull: true,
-          comment: 'pickLatitude'
+            type: DataTypes.STRING(50),
+            allowNull: true,
+            comment: 'pickLatitude'
         },
         morning: {
-            type: DataTypes.BOOLEAN,
+            type: DataTypes.STRING(10),
             allowNull: false,
             comment: '픽업 가능 시간대 아침'
         },
         afterNoon: {
-            type: DataTypes.BOOLEAN,
+            type: DataTypes.STRING(10),
             allowNull: false,
             comment: '픽업 가능 시간대 오후'
         },
         evening: {
-            type: DataTypes.BOOLEAN,
+            type: DataTypes.STRING(10),
             allowNull: false,
             comment: '픽업 가능 시간대 저녁'
         },
         night: {
-            type: DataTypes.BOOLEAN,
+            type: DataTypes.STRING(10),
             allowNull: false,
             comment: '픽업 가능 시간대 심야'
         },
@@ -113,12 +73,12 @@ module.exports = (sequelize, DataTypes) => {
             comment: '물품 종류'
         },
         big: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.STRING(10),
             allowNull: false,
             comment: '물품 크기'
         },
         weight: {
-            type: DataTypes.INTEGER,
+            type: DataTypes.STRING(10),
             allowNull: false,
             comment: '물품 무게'
         },
@@ -148,19 +108,29 @@ module.exports = (sequelize, DataTypes) => {
             comment: '추가입력사항'
         },
         status: {
-          type: DataTypes.ENUM('A','B','C','D','F'),
-          allowNull: false,
-          comment: 'status 값'
+            type: DataTypes.ENUM('A', 'B', 'C', 'D', 'F'),
+            allowNull: false,
+            comment: 'status 값'
         },
         price: {
-          type: DataTypes.STRING(10),
-          allowNull: false,
-          comment: '금액'
+            type: DataTypes.STRING(10),
+            allowNull: false,
+            comment: '금액'
+        },
+        cardName: {
+            type: DataTypes.STRING(10),
+            allowNull: true,
+            comment: '사용자 카드 이름'
+        },
+        coupon: {
+            type: DataTypes.STRING(10),
+            allowNull: true,
+            comment: '쿠폰 번호'
         },
         createdAt: {
             type: DataTypes.DATE,
-//note here this is the guy that you are looking for
-          get() {
+            //note here this is the guy that you are looking for
+            get() {
                 return moment(this.getDataValue('createdAt')).format('YYYY/MM/DD');
             }
         },
@@ -169,7 +139,7 @@ module.exports = (sequelize, DataTypes) => {
             get() {
                 return moment(this.getDataValue('updatedAt')).format('YYYY/MM/DD');
             }
-          }
+        }
 
     });
 }
