@@ -1,48 +1,11 @@
-'use strict';
+"use strict";
 
 // const fs = require('fs');
 // const path = require('path');
-const Sequelize = require('sequelize');
+const Sequelize = require("sequelize");
 const Op = Sequelize.Op;
-// const operatorsAliases = {
-//   $eq: Op.eq,
-//   $ne: Op.ne,
-//   $gte: Op.gte,
-//   $gt: Op.gt,
-//   $lte: Op.lte,
-//   $lt: Op.lt,
-//   $not: Op.not,
-//   $in: Op.in,
-//   $notIn: Op.notIn,
-//   $is: Op.is,
-//   $like: Op.like,
-//   $notLike: Op.notLike,
-//   $iLike: Op.iLike,
-//   $notILike: Op.notILike,
-//   $regexp: Op.regexp,
-//   $notRegexp: Op.notRegexp,
-//   $iRegexp: Op.iRegexp,
-//   $notIRegexp: Op.notIRegexp,
-//   $between: Op.between,
-//   $notBetween: Op.notBetween,
-//   $overlap: Op.overlap,
-//   $contains: Op.contains,
-//   $contained: Op.contained,
-//   $adjacent: Op.adjacent,
-//   $strictLeft: Op.strictLeft,
-//   $strictRight: Op.strictRight,
-//   $noExtendRight: Op.noExtendRight,
-//   $noExtendLeft: Op.noExtendLeft,
-//   $and: Op.and,
-//   $or: Op.or,
-//   $any: Op.any,
-//   $all: Op.all,
-//   $values: Op.values,
-//   $col: Op.col,
-// };
-// const basename = path.basename(__filename);
-const env = process.env.NODE_ENV || 'test';
-const config = require('../config/config.json')[env];
+const env = process.env.NODE_ENV || "test";
+const config = require("../config/config.json")[env];
 const db = {};
 
 let sequelize;
@@ -52,12 +15,17 @@ let sequelize;
 //   sequelize = new Sequelize(config.database, config.username, config.password, config);
 // }
 sequelize = new Sequelize(
-  config.database, config.username, config.password, config, {
+  config.database,
+  config.username,
+  config.password,
+  config,
+  {
     host: config.host,
-    dialect: 'mysql',
+    dialect: "mysql",
     logging: false,
-    operatorsAliases: Op,
-});
+    operatorsAliases: Op
+  }
+);
 
 // fs
 //   .readdirSync(__dirname)
@@ -78,20 +46,11 @@ sequelize = new Sequelize(
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-db.Order = require('./order')(sequelize, Sequelize);
-db.Deliver = require('./deliver')(sequelize,Sequelize);
-
-// sequelize
-//   .authenticate()
-//   .then(() => {
-//     console.log('Connection has been established successfully');
-//   })
-//   .catch(err => {
-//     console.error('Unable to connect to the database:', err);
-//   });
+db.Order = require("./order")(sequelize, Sequelize);
+db.Deliver = require("./deliver")(sequelize, Sequelize);
+db.User = require("./user")(sequelize, Sequelize);
 
 db.Order.hasOne(db.Deliver);
-db.Deliver.belongsTo(db.Order, {foreignKey : 'orderId'});
-
+db.Deliver.belongsTo(db.Order, { foreignKey: "orderId" });
 
 module.exports = db;
