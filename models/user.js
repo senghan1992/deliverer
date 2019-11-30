@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       comment: "유저 핸드폰 번호 및 아이디 역할"
     },
     gender: {
-      type: DataTypes.BOOLEAN,
+      type: DataTypes.STRING,
       allowNull: true,
       comment: "유저 성별"
     },
@@ -53,6 +53,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: "선택항목 동의",
       defaultValue: 0
+    },
+    price: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "총 금액"
     },
     star: {
       type: DataTypes.INTEGER,
