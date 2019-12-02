@@ -16,7 +16,7 @@ router.get("/:id", function(req, res) {
   console.log("/delivers : get");
   let delivererId = req.params.id;
   db.Deliver.findAll({
-    include: [db.Order],
+    include: [{ model: db.Order, include: [{ model: db.User }] }],
     where: {
       delivererId: delivererId
     }
@@ -44,7 +44,8 @@ router.post("/", (req, res) => {
   db.Deliver.create({
     delivererId: delivererId,
     requestId: requestId,
-    orderId: orderId
+    orderId: orderId,
+    status: "A"
   })
     .then(deliver => {
       console.log(deliver);
@@ -73,7 +74,7 @@ router.post("/", (req, res) => {
           //   if (err) console.log("Something has gone wrong!");
           //   else console.log("Successfully sent with response : ", response);
           // });
-          
+
           // 요청자 카드로 결제
 
           res.json({

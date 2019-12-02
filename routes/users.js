@@ -27,40 +27,31 @@ AWS.config.update({
   region: config.aws.region
 });
 
+// user profile account update
+router.put("/account/:id", check.loginCheck, (req, res) => {
+  let userId = req.params.id;
+  User.update(
+    { bank: req.body.bank, bankNum: req.body.bankNum },
+    { where: { id: userId } }
+  ).then(result => {
+
+  });
+});
+
 // user 정보 가지고 오기 (발송 건수, 운송 건수, 기본 정보)
 router.get("/:id", (req, res) => {
   db.sequelize
     .query(
-      `select u.* , COUNT(o.requestId) as orders, COUNT(d.delivererId) as delivers from users as u left join orders as o on u.id = o.requestId left join delivers as d on u.id = d.delivererId group by u.id having u.id = ${req.params.id}`,{type : db.sequelize.QueryTypes.SELECT}
+      `select u.* , COUNT(o.requestId) as orders, COUNT(d.delivererId) as delivers from users as u left join orders as o on u.id = o.requestId left join delivers as d on u.id = d.delivererId group by u.id having u.id = ${req.params.id}`,
+      { type: db.sequelize.QueryTypes.SELECT }
     )
     .then(result => {
-      console.log(result);
+      // console.log(result);
       res.json({
         code: 200,
         user: result[0]
       });
     });
-  // User.findOne({ where: { id: req.params.id } })
-  //   .then(result => {
-  //     if (result) { 
-  //       res.json({
-  //         code: 200,
-  //         user: result
-  //       });
-  //     } else {
-  //       res.json({
-  //         code: 401,
-  //         error: "error"
-  //       });
-  //     }
-  //   })
-  //   .catch(error => {
-  //     res.json({
-  //       code: 999,
-  //       error,
-  //       msg: "시스템 오류"
-  //     });
-  //   });
 });
 
 /* GET users listing. */
