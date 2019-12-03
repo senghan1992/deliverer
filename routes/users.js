@@ -28,13 +28,16 @@ AWS.config.update({
 });
 
 // user profile account update
-router.put("/account/:id", check.loginCheck, (req, res) => {
+router.put("/account/:id", (req, res) => {
   let userId = req.params.id;
   User.update(
     { bank: req.body.bank, bankNum: req.body.bankNum },
     { where: { id: userId } }
   ).then(result => {
-
+    res.json({
+      code : 200,
+      result
+    })
   });
 });
 

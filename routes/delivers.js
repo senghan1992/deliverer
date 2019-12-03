@@ -35,7 +35,7 @@ router.post("/", (req, res) => {
   let delivererId = parseInt(req.body.delivererId);
   let requestId = parseInt(req.body.requestId);
 
-  console.log(typeof parseInt(orderId));
+  // console.log(typeof parseInt(orderId));
   // console.log(typeof(int(delivererId)));
 
   // db.Order.findOne({where:{id:params_id}})
@@ -48,7 +48,7 @@ router.post("/", (req, res) => {
     status: "A"
   })
     .then(deliver => {
-      console.log(deliver);
+      // console.log(deliver);
       db.Order.update(
         {
           status: "B"
@@ -60,27 +60,32 @@ router.post("/", (req, res) => {
         }
       )
         .then(data => {
-          // 요청자에게 매칭 성사되었다는 알림
-          // let message = {
-          //   to: "요청자 fcm token 값",
-          //   collapse_key: "green",
+          // console.log(data);
+          db.User.findOne({ where: { id: requestId } }).then(requestUserResult => {
+            // console.log(requestUserResult.fcm_token);
+            // 요청자에게 매칭 성사되었다는 알림
+            let message = {
+              to: requestUserResult.fcm_token,
+              collapse_key: "green",
 
-          //   notification: {
-          //     title: "매칭 성공!",
-          //     body: "매칭이 완료되었습니다. 배송을 시작합니다"
-          //   }
-          // };
-          // fcm.send(message, (err, response) => {
-          //   if (err) console.log("Something has gone wrong!");
-          //   else console.log("Successfully sent with response : ", response);
-          // });
+              notification: {
+                title: "매칭 성공!",
+                body: "매칭이 완료되었습니다. 배송을 시작합니다"
+              }
+            };
+            fcm.send(message, (err, response) => {
+              if (err) console.log("Something has gone wrong!");
+              else console.log("Successfully sent with response : ", response);
+            });
 
-          // 요청자 카드로 결제
+            // 요청자 카드로 결제
+            ////////////////////////////////
 
-          res.json({
-            code: 200,
-            result: true,
-            data
+            res.json({
+              code: 200,
+              result: true,
+              data
+            });
           });
         })
         .catch(err => {

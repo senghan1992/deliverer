@@ -21,7 +21,7 @@ router.get("/:id", (req, res) => {
   // 로그인 되어있는 유저의 아이디 값을 받아오면 바로 적용 가능하다
   let requestId = req.params.id;
   Order.findAll({
-    // include: [Deliver],
+    include: [{ model: db.Deliver, include: [{ model: db.User }] }],
     where: {
       requestId: requestId,
       status: {
@@ -103,9 +103,9 @@ router.get("/", (req, res) => {
     .catch(error => {
       console.log(error);
       res.json({
-          code : 999,
-          error,
-      })
+        code: 999,
+        error
+      });
     });
 });
 
