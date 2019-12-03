@@ -52,7 +52,16 @@ db.User = require("./user")(sequelize, Sequelize);
 
 db.Order.hasOne(db.Deliver);
 db.Order.hasOne(db.User, { foreignKey: "id", sourceKey: "requestId" });
-db.Deliver.hasOne(db.User, { foreignKey: "id", sourceKey: "delivererId" });
+db.Deliver.belongsTo(db.User, {
+  as: "deliverUser",
+  foreignKey: "delivererId",
+  // sourceKey: "id"
+});
+db.Deliver.belongsTo(db.User, {
+  as: "requestUser",
+  foreignKey: "requestId",
+  // sourceKey: "id"
+});
 db.Deliver.belongsTo(db.Order, { foreignKey: "orderId" });
 
 module.exports = db;
