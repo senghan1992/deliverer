@@ -21,7 +21,7 @@ AWS.config.update({
 
 /* GET home page. */
 
-// 운송 detail put
+// 운송 detail put 픽업사진 배송완료 사진 등록
 router.put("/:id", (req, res) => {
   let kind = req.body.kind;
   let deliverId = req.params.id;
@@ -66,12 +66,17 @@ router.put("/:id", (req, res) => {
           { where: { id: orderId } }
         )
           .then(updateOrder => {
+            console.log(orderId);
             let message = {
               to: requestUser_fcmToken,
-              collapse_key: "green",
               notification: {
                 title: "픽업 완료!",
-                body: "딜리버러가 픽업을 완료하었습니다."
+                body: "딜리버러가 픽업을 완료하었습니다.",
+              },
+              data: {
+                title: "pickup",
+                body: orderId,
+                click_action: "FLUTTER_NOTIFICATION_CLICK"
               }
             };
             fcm.send(message, (err, response) => {
@@ -104,6 +109,8 @@ router.put("/:id", (req, res) => {
         });
       });
   } // end kind = pickup
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
   else if (kind == "deliver") {
     let imageUrl =
       "images/deliver/" +
@@ -140,10 +147,14 @@ router.put("/:id", (req, res) => {
           .then(updateOrder => {
             let message = {
               to: requestUser_fcmToken,
-              collapse_key: "green",
               notification: {
                 title: "배송 완료!",
                 body: "딜리버러가 배송을 완료하었습니다."
+              },
+              data: {
+                title: "deliver",
+                body: orderId,
+                click_action: "FLUTTER_NOTIFICATION_CLICK"
               }
             };
             fcm.send(message, (err, response) => {
@@ -175,11 +186,110 @@ router.put("/:id", (req, res) => {
           err
         });
       });
+  } // end 배송완료 사진
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // kind = finish => 운송 완료 => 종료
+  else if (kind == "finish") {
+    let delivererId = req.body.delivererId; // 운송원 id
+    let orderPrice = req.body.orderPrice; // 운송 물품 가격
+    // deliver status 값 => D
+    db.Deliver.update({ status: "D" }, { where: { id: deliverId } })
+      .then(deliverResult => {
+        // order status 값 => E
+        db.Order.update({ status: "E" }, { where: { id: orderId } })
+          .then(orderResult => {
+            // 딜리버러 수익금 올려주기
+            db.User.update(
+              {
+                price: db.sequelize.literal(`price + ${orderPrice}`)
+              },
+              { where: { id: delivererId } }
+            )
+              .then(userResult => {
+                // push 알림
+                console.log(requestUser_fcmToken);
+                let message = {
+                  to: requestUser_fcmToken,
+                  notification: {
+                    title: "운송 종료!",
+                    body:
+                      "운송을 종료합니다.\n딜리버러가 마음에 드셨나요? 리뷰를 남겨주세요"
+                  },
+                  data: {
+                    title: "finish",
+                    body: orderId,
+                    click_action: "FLUTTER_NOTIFICATION_CLICK"
+                  }
+                };
+                fcm.send(message, (err, response) => {
+                  if (err) {
+                    console.log("Something has gone wrong!");
+                    console.log(err);
+                    res.json({
+                      code: -1,
+                      err
+                    });
+                  } else {
+                    res.json({
+                      code: 200,
+                      result: true
+                    });
+                  }
+                });
+              })
+              .catch(err => {
+                res.json({
+                  code: -1,
+                  err: "user update err"
+                });
+              });
+          })
+          .catch(err => {
+            res.json({
+              code: -1,
+              err: "order update err"
+            });
+          });
+      })
+      .catch(err => {
+        res.json({
+          code: -1,
+          err: "deliver update err"
+        });
+      });
   }
 });
 
+// 운송 내역 디테일
+router.get("/:id", (req, res) => {
+  console.log("/delivers/:id : get");
+  let deliverId = req.params.id;
+  db.Deliver.findOne({
+    include: [
+      { model: db.User, as: "requestUser" },
+      { model: db.User, as: "deliverUser" },
+      { model: db.Order }
+    ],
+    where: { id: deliverId }
+  })
+    .then(result => {
+      console.log(result);
+      res.json({
+        code: 200,
+        result
+      });
+    })
+    .catch(err => {
+      res.json({
+        code: 999,
+        err
+      });
+    });
+});
+
 // 운송 내역 리스트
-router.get("/:id", function(req, res) {
+router.get("/history/:id", function(req, res) {
   console.log("/delivers : get");
   let delivererId = req.params.id;
   db.Deliver.findAll({
@@ -190,7 +300,8 @@ router.get("/:id", function(req, res) {
     ],
     where: {
       delivererId: delivererId
-    }
+    },
+    order: [["createdAt", "desc"]]
   }).then(data => {
     // console.log(data);
     res.json({
@@ -200,7 +311,8 @@ router.get("/:id", function(req, res) {
     });
   });
 });
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 매칭하기
 router.post("/", (req, res) => {
   let orderId = parseInt(req.body.orderId);
@@ -239,11 +351,14 @@ router.post("/", (req, res) => {
               // 요청자에게 매칭 성사되었다는 알림
               let message = {
                 to: requestUserResult.fcm_token,
-                collapse_key: "green",
-
                 notification: {
                   title: "매칭 성공!",
-                  body: "매칭이 완료되었습니다. 배송을 시작합니다"
+                  body: "매칭이 완료되었습니다. 운송을 시작합니다"
+                },
+                data: {
+                  title: "match",
+                  body: orderId,
+                  click_action: "FLUTTER_NOTIFICATION_CLICK"
                 }
               };
               fcm.send(message, (err, response) => {

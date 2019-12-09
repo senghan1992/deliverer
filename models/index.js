@@ -54,7 +54,7 @@ db.Order.hasOne(db.Deliver);
 db.Order.hasOne(db.User, { foreignKey: "id", sourceKey: "requestId" });
 db.Deliver.belongsTo(db.User, {
   as: "deliverUser",
-  foreignKey: "delivererId",
+  foreignKey: "delivererId"
   // sourceKey: "id"
 });
 db.Deliver.belongsTo(db.User, {

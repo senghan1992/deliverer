@@ -15,14 +15,37 @@ AWS.config.update({
   region: config.aws.region
 });
 
-// 발송 내역 리스트
+// 발송내역 detail
 router.get("/:id", (req, res) => {
+  console.log("/orders/:id : get");
+  let orderId = req.params.id;
+  db.Order.findOne({
+    include: [
+      { model: db.Deliver, include: [{ model: db.User, as: "deliverUser" }] }
+    ],
+    where: { id: orderId }
+  }).then(result => {
+    res.json({
+      code: 200,
+      result
+    });
+  });
+});
+
+// 발송 내역 리스트
+router.get("/history/:id", (req, res) => {
   console.log("/orders : get");
   // 로그인 되어있는 유저의 아이디 값을 받아오면 바로 적용 가능하다
   let requestId = req.params.id;
   Order.findAll({
     include: [
-      { model: db.Deliver, include: [{ model: db.User, as: "deliverUser" }] }
+      {
+        model: db.Deliver,
+        include: [
+          { model: db.User, as: "deliverUser" },
+          // { model: db.User, as: "requestUser" }
+        ]
+      }
     ],
     where: {
       requestId: requestId,
@@ -31,14 +54,21 @@ router.get("/:id", (req, res) => {
       }
     },
     order: [["createdAt", "desc"]]
-  }).then(data => {
-    // console.log(result.dataValues);
-    res.json({
-      code: 200,
-      result: true,
-      data
+  })
+    .then(data => {
+      // console.log(result.dataValues);
+      res.json({
+        code: 200,
+        result: true,
+        data
+      });
+    })
+    .catch(err => {
+      res.json({
+        code: 999,
+        err
+      });
     });
-  });
 });
 
 // 요청 불러오기

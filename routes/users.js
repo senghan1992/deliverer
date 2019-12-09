@@ -27,6 +27,49 @@ AWS.config.update({
   region: config.aws.region
 });
 
+// user profile image update
+router.put("/:id", check.loginCheck, (req, res) => {
+  // console.log("ㅇㅕ기 진입");
+  let userId = req.user.id;
+  console.log(userId);
+  let imageUrl = `images/${new Date().getMonth() + 1}/${new Date().getDate()}/${
+    req.file.profile.name
+  }`;
+
+  const S3 = new AWS.S3();
+
+  let param = {
+    Bucket: "deliverer.app",
+    Key: imageUrl,
+    ACL: "public-read",
+    Body: req.file.profile.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
+    ContentType: "image/png" // MIME 타입
+  };
+
+  S3.upload(param, (err, data) => {
+    if (err)
+      res.json({
+        result: false,
+        message: err
+      });
+  });
+
+  db.User.update({ profile: imageUrl }, { where: { id: userId } })
+    .then(result => {
+      console.log(result);
+      res.json({
+        code: 200,
+        result
+      });
+    })
+    .catch(err => {
+      res.json({
+        code: 999,
+        err
+      });
+    });
+});
+
 // user profile account update
 router.put("/account/:id", (req, res) => {
   let userId = req.params.id;
@@ -35,9 +78,9 @@ router.put("/account/:id", (req, res) => {
     { where: { id: userId } }
   ).then(result => {
     res.json({
-      code : 200,
+      code: 200,
       result
-    })
+    });
   });
 });
 

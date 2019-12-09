@@ -108,12 +108,12 @@ module.exports = (sequelize, DataTypes) => {
             comment: '추가입력사항'
         },
         status: {
-            type: DataTypes.ENUM('A', 'B', 'C', 'D', 'F'),
+            type: DataTypes.ENUM('A', 'B', 'C', 'D', 'E', 'F'),
             allowNull: false,
             comment: 'status 값'
         },
         price: {
-            type: DataTypes.STRING(10),
+            type: DataTypes.INTEGER,
             allowNull: false,
             comment: '금액'
         },
