@@ -30,7 +30,8 @@ exports.loginCheck = (req, res, next) => {
         msg: "로그인 후 이용해주세요"
       });
     }
-    req.user_id = decoded.id;
+    // console.log(decoded);
+    req.user = decoded.user;
     next();
   });
 };

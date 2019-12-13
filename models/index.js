@@ -49,9 +49,11 @@ db.Sequelize = Sequelize;
 db.Order = require("./order")(sequelize, Sequelize);
 db.Deliver = require("./deliver")(sequelize, Sequelize);
 db.User = require("./user")(sequelize, Sequelize);
+db.Review = require("./review")(sequelize, Sequelize);
 
 db.Order.hasOne(db.Deliver);
-db.Order.hasOne(db.User, { foreignKey: "id", sourceKey: "requestId" });
+db.Order.hasOne(db.User, { foreignKey: "requestId", sourceKey: "id" });
+
 db.Deliver.belongsTo(db.User, {
   as: "deliverUser",
   foreignKey: "delivererId"
@@ -59,9 +61,18 @@ db.Deliver.belongsTo(db.User, {
 });
 db.Deliver.belongsTo(db.User, {
   as: "requestUser",
-  foreignKey: "requestId",
+  foreignKey: "requestId"
   // sourceKey: "id"
 });
 db.Deliver.belongsTo(db.Order, { foreignKey: "orderId" });
+
+db.Review.belongsTo(db.User, {
+  as: "writerUser",
+  foreignKey: "writer_id"
+});
+db.Review.belongsTo(db.User, {
+  as: "user",
+  foreignKey: "user_id"
+});
 
 module.exports = db;

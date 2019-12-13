@@ -61,10 +61,16 @@ module.exports = (sequelize, DataTypes) => {
       comment: "총 금액"
     },
     star: {
-      type: DataTypes.INTEGER,
+      type: DataTypes.DOUBLE,
       allowNull: false,
       defaultValue: 0,
       comment: "별점"
+    },
+    star_total: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "별점 쓴 갯수"
     },
     fcm_token: {
       type: DataTypes.STRING,
@@ -72,17 +78,19 @@ module.exports = (sequelize, DataTypes) => {
       comment: "유저 fcm token"
     },
     createdAt: {
-      type: DataTypes.DATE,
+      type: "TIMESTAMP",
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
       //note here this is the guy that you are looking for
-      get() {
-        return moment(this.getDataValue("createdAt")).format("YYYY/MM/DD");
-      }
+      // get() {
+      //   return moment(this.getDataValue("createdAt")).format("YYYY/MM/DD");
+      // }
     },
     updatedAt: {
-      type: DataTypes.DATE,
-      get() {
-        return moment(this.getDataValue("updatedAt")).format("YYYY/MM/DD");
-      }
+      type: "TIMESTAMP",
+      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
+      // get() {
+      //   return moment(this.getDataValue("updatedAt")).format("YYYY/MM/DD");
+      // }
     }
   });
 };

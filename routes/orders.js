@@ -42,7 +42,7 @@ router.get("/history/:id", (req, res) => {
       {
         model: db.Deliver,
         include: [
-          { model: db.User, as: "deliverUser" },
+          { model: db.User, as: "deliverUser" }
           // { model: db.User, as: "requestUser" }
         ]
       }
@@ -51,6 +51,9 @@ router.get("/history/:id", (req, res) => {
       requestId: requestId,
       status: {
         [Op.ne]: "F"
+      },
+      status: {
+        [Op.ne]: "E"
       }
     },
     order: [["createdAt", "desc"]]
@@ -69,6 +72,21 @@ router.get("/history/:id", (req, res) => {
         err
       });
     });
+});
+
+// 발송 완료 내역 리스트
+router.get("/history/finish/:id", (req, res) => {
+  db.Order.findAll({
+    where: { requestId: req.params.id, status: "E" },
+    include: [
+      { model: db.Deliver, include: [{ model: db.User, as: "deliverUser" }] }
+    ]
+  }).then(result => {
+    res.json({
+      code: 200,
+      result
+    });
+  });
 });
 
 // 요청 불러오기

@@ -28,46 +28,65 @@ AWS.config.update({
 });
 
 // user profile image update
-router.put("/:id", check.loginCheck, (req, res) => {
+router.put("/:id", check.loginCheck, async (req, res) => {
   // console.log("ㅇㅕ기 진입");
   let userId = req.user.id;
-  console.log(userId);
-  let imageUrl = `images/${new Date().getMonth() + 1}/${new Date().getDate()}/${
-    req.file.profile.name
-  }`;
+  let kind = req.body.kind;
 
-  const S3 = new AWS.S3();
+  if (kind == "new") {
+    // console.log(req.files);
+    let imageUrl = `images/profiles/${new Date().getMonth() +
+      1}/${new Date().getDate()}/${req.files.profile.name}`;
 
-  let param = {
-    Bucket: "deliverer.app",
-    Key: imageUrl,
-    ACL: "public-read",
-    Body: req.file.profile.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
-    ContentType: "image/png" // MIME 타입
-  };
+    console.log(imageUrl);
 
-  S3.upload(param, (err, data) => {
-    if (err)
-      res.json({
-        result: false,
-        message: err
-      });
-  });
+    const S3 = new AWS.S3();
 
-  db.User.update({ profile: imageUrl }, { where: { id: userId } })
-    .then(result => {
-      console.log(result);
-      res.json({
-        code: 200,
-        result
-      });
-    })
-    .catch(err => {
-      res.json({
-        code: 999,
-        err
-      });
+    let param = {
+      Bucket: "deliverer.app",
+      Key: imageUrl,
+      ACL: "public-read",
+      Body: req.files.profile.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
+      ContentType: "image/png" // MIME 타입
+    };
+
+    await S3.upload(param, (err, data) => {
+      if (err)
+        res.json({
+          result: false,
+          message: err
+        });
     });
+
+    db.User.update({ profile: imageUrl }, { where: { id: userId } })
+      .then(result => {
+        console.log(result);
+        res.json({
+          code: 200,
+          result: imageUrl
+        });
+      })
+      .catch(err => {
+        res.json({
+          code: 999,
+          err
+        });
+      });
+  } else if (kind == "normal") {
+    db.User.update({ profile: null }, { where: { id: userId } })
+      .then(result => {
+        res.json({
+          code: 200,
+          result
+        });
+      })
+      .catch(err => {
+        res.json({
+          code: 999,
+          err
+        });
+      });
+  }
 });
 
 // user profile account update

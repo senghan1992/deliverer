@@ -3,6 +3,7 @@ var router = express.Router();
 
 //db models
 const db = require("../models");
+const Op = db.Sequelize.Op;
 
 // push notification
 const FCM = require("fcm-node");
@@ -21,8 +22,84 @@ AWS.config.update({
 
 /* GET home page. */
 
+// 발송자 리뷰
+router.post("/review", (req, res) => {
+  let deliverId = req.body.deliverId;
+  let delivererId = req.body.delivererId;
+  let requestUserId = req.body.requestUserId;
+  let comment = req.body.comment;
+  let score = req.body.score;
+
+  // comment 등록 / User Score 및 리뷰 총 갯수 up / Delivers db review tab -> T
+  db.Review.create({
+    writer_id: delivererId,
+    user_id: requestUserId,
+    comment: comment,
+    score: score
+  })
+    .then(reviewResult => {
+      // console.log(reviewResult);
+      if (reviewResult) {
+        db.User.update(
+          {
+            star: db.sequelize.literal(`star + ${score}`),
+            star_total: db.sequelize.literal(`star_total + 1`)
+          },
+          { where: { id: requestUserId } }
+        )
+          .then(userStarResult => {
+            // console.log(userStarResult);
+            if (userStarResult) {
+              db.Deliver.update(
+                { orderUserReview: "T" },
+                { where: { id: deliverId } }
+              )
+                .then(deliverResult => {
+                  if (deliverResult) {
+                    res.json({
+                      code: 200
+                    });
+                  } else {
+                    res.json({
+                      code: 999
+                    });
+                  }
+                })
+                .catch(err => {
+                  res.json({
+                    code: 999,
+                    err
+                  });
+                });
+            } else {
+              res.json({
+                code: 999
+              });
+            }
+          })
+          .catch(err => {
+            res.json({
+              code: 999,
+              err
+            });
+          });
+      } else {
+        res.json({
+          code: 999
+        });
+      }
+      // if(reviewResult.id)
+    })
+    .catch(err => {
+      res.json({
+        code: 999,
+        err
+      });
+    });
+});
+
 // 운송 detail put 픽업사진 배송완료 사진 등록
-router.put("/:id", (req, res) => {
+router.put("/:id", async (req, res) => {
   let kind = req.body.kind;
   let deliverId = req.params.id;
   let orderId = req.body.orderId;
@@ -47,7 +124,7 @@ router.put("/:id", (req, res) => {
       Body: req.files.pickUpImage.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
       ContentType: "image/png" // MIME 타입
     };
-    S3.upload(param, (err, data) => {
+    await S3.upload(param, (err, data) => {
       if (err) res.json({ result: false, msg: err });
     });
     // deliver status 변경
@@ -71,7 +148,7 @@ router.put("/:id", (req, res) => {
               to: requestUser_fcmToken,
               notification: {
                 title: "픽업 완료!",
-                body: "딜리버러가 픽업을 완료하었습니다.",
+                body: "딜리버러가 픽업을 완료하었습니다."
               },
               data: {
                 title: "pickup",
@@ -126,7 +203,7 @@ router.put("/:id", (req, res) => {
       Body: req.files.deliverImage.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
       ContentType: "image/png" // MIME 타입
     };
-    S3.upload(param, (err, data) => {
+    await S3.upload(param, (err, data) => {
       if (err) res.json({ result: false, msg: err });
     });
     // deliver status 변경
@@ -299,7 +376,10 @@ router.get("/history/:id", function(req, res) {
       { model: db.Order }
     ],
     where: {
-      delivererId: delivererId
+      delivererId: delivererId,
+      status: {
+        [Op.ne]: "D"
+      }
     },
     order: [["createdAt", "desc"]]
   }).then(data => {
@@ -309,6 +389,24 @@ router.get("/history/:id", function(req, res) {
       result: true,
       data
     });
+  });
+});
+
+// 운송 완료 내역 리스트
+router.get("/history/finish/:id", (req, res) => {
+  db.Deliver.findAll({
+    where: { delivererId: req.params.id, status: "D" },
+    include: [
+      {model : db.User, as: "requestUser"},
+      {model : db.User, as: "deliverUser"},
+      {model : db.Order},
+    ] 
+  }).then(result => {
+    // console.log(result);
+    res.json({
+      code : 200,
+      result
+    })
   });
 });
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
