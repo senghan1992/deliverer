@@ -79,7 +79,13 @@ router.get("/history/finish/:id", (req, res) => {
   db.Order.findAll({
     where: { requestId: req.params.id, status: "E" },
     include: [
-      { model: db.Deliver, include: [{ model: db.User, as: "deliverUser" }] }
+      {
+        model: db.Deliver,
+        include: [
+          { model: db.User, as: "deliverUser" },
+          { model: db.User, as: "requestUser" }
+        ]
+      }
     ]
   }).then(result => {
     res.json({

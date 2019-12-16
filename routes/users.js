@@ -105,18 +105,31 @@ router.put("/account/:id", (req, res) => {
 
 // user 정보 가지고 오기 (발송 건수, 운송 건수, 기본 정보)
 router.get("/:id", (req, res) => {
-  db.sequelize
-    .query(
-      `select u.* , COUNT(o.requestId) as orders, COUNT(d.delivererId) as delivers from users as u left join orders as o on u.id = o.requestId left join delivers as d on u.id = d.delivererId group by u.id having u.id = ${req.params.id}`,
-      { type: db.sequelize.QueryTypes.SELECT }
-    )
-    .then(result => {
-      // console.log(result);
-      res.json({
-        code: 200,
-        user: result[0]
+  db.User.findOne({where : {id : req.params.id}})
+  // db.User.findOne({ where: { id: req.params.id } })
+  .then (result => {
+    // console.log(result);
+    db.sequelize
+      .query(
+        `select count(*) as count from orders where requestId = ${req.params.id}`,
+        { type: db.sequelize.QueryTypes.SELECT }
+      )
+      .then(order_result => {
+        db.sequelize
+          .query(
+            `select count(*) as count from delivers where delivererId = ${req.params.id}`,
+            { type: db.sequelize.QueryTypes.SELECT }
+          )
+          .then(deliver_result => {
+            res.json({
+              code: 200,
+              user: result,
+              order_result: order_result[0]["count"],
+              deliver_result: deliver_result[0]["count"]
+            });
+          });
       });
-    });
+  });
 });
 
 /* GET users listing. */
