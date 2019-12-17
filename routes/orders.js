@@ -6,6 +6,12 @@ const { Order, Deliver } = require("../models");
 const db = require("../models");
 const Op = db.Sequelize.Op;
 
+// push notification
+const FCM = require("fcm-node");
+const serverKey =
+  "AAAAtfZmb8Y:APA91bGlfzcggXhLh7JJ-7VVLKNntdHuu70hMZjHZiANDtCorJmu7UzbcRToXshS1wYzRXuouToEhqwOsNazV7zsr5Rl5nTfWuvDLhITyTcjH1_eSDXRkbe8KTFSkLjcFWpQaXl_N6rd";
+const fcm = new FCM(serverKey);
+
 // // AWS
 const AWS = require("aws-sdk");
 const config = require("../config/aws_config");
@@ -50,10 +56,7 @@ router.get("/history/:id", (req, res) => {
     where: {
       requestId: requestId,
       status: {
-        [Op.ne]: "F"
-      },
-      status: {
-        [Op.ne]: "E"
+        [Op.notIn]: ["E", "F"]
       }
     },
     order: [["createdAt", "desc"]]
@@ -325,32 +328,106 @@ router.post("/", (req, res) => {
 // 요청 취소
 router.delete("/:id", (req, res) => {
   let params_id = req.params.id;
+  let kind = req.query.kind;
   // status 가 A 인지 확인
-  Order.update(
-    {
-      status: "F"
-    },
-    {
-      where: {
-        id: params_id
+  if (kind == "A") {
+    Order.update(
+      {
+        status: "F"
+      },
+      {
+        where: {
+          id: params_id
+        }
       }
-    }
-  )
-    .then(data => {
-      console.log(data);
-      res.json({
-        code: 200,
-        result: true,
-        data
+    )
+      .then(data => {
+        console.log(data);
+        res.json({
+          code: 200,
+          result: true,
+          data
+        });
+      })
+      .catch(err => {
+        console.log(err);
+        res.json({
+          code: -1,
+          result: false
+        });
       });
-    })
-    .catch(err => {
-      console.log(err);
-      res.json({
-        code: -1,
-        result: false
-      });
+  } else {
+    // 매칭 된 후 10분 이하일 때 취소가 가능하다
+    Order.findOne(
+      {
+        include: [
+          {
+            model: db.Deliver,
+            include: [
+              { model: db.User, as: "deliverUser" }
+              // { model: db.User, as: "requestUser" }
+            ]
+          }
+        ]
+      },
+      { where: { id: params_id } }
+    ).then(result => {
+      Order.update({ status: "F" }, { where: { id: params_id } }).then(
+        order_result => {
+          if (order_result) {
+            // deliver update
+            Deliver.update(
+              { status: "F" },
+              { where: { id: result.deliver.id } }
+            ).then(deliver_result => {
+              console.log(deliver_result);
+              console.log(result.deliver);
+              if (deliver_result) {
+                console.log(result.deliver.deliverUser.fcm_token);
+                let message = {
+                  to: result.deliver.deliverUser.fcm_token,
+                  notification: {
+                    title: "운송 취소!",
+                    body: "발송자가 운송을 취소하였습니다."
+                  },
+                  data: {
+                    title: "cancel_request_user",
+                    body: "",
+                    click_action: "FLUTTER_NOTIFICATION_CLICK"
+                  }
+                };
+                fcm.send(message, (err, response) => {
+                  if (err) {
+                    console.log(err);
+                    res.json({
+                      code: -1,
+                      err
+                    });
+                  } else {
+                    console.log("Successfully sent with response : ", response);
+                    res.json({
+                      code: 200
+                    });
+                  }
+                });
+              } else {
+                res.json({
+                  code: -1,
+                  result: false
+                });
+              }
+            });
+          } else {
+            // update 실패
+            res.json({
+              code: -1,
+              result: false
+            });
+          }
+        }
+      );
     });
+  }
 });
 
 module.exports = router;

@@ -378,7 +378,7 @@ router.get("/history/:id", function(req, res) {
     where: {
       delivererId: delivererId,
       status: {
-        [Op.ne]: "D"
+        [Op.notIn]: ["D", "F"]
       }
     },
     order: [["createdAt", "desc"]]

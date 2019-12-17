@@ -45,7 +45,7 @@ module.exports = (sequelize, DataTypes) => {
       comment : '발송자 리뷰'
     },
     status: {
-      type: DataTypes.ENUM("A", "B", "C", "D"),
+      type: DataTypes.ENUM("A", "B", "C", "D","F"),
       allowNull: true,
       comment: "운송 상태값"
     },
