@@ -1,5 +1,11 @@
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define("review", {
+    // order num
+    order_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      comment: "order id"
+    },
     // 쓴사람
     writer_id: {
       type: DataTypes.INTEGER,

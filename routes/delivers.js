@@ -27,11 +27,13 @@ router.post("/review", (req, res) => {
   let deliverId = req.body.deliverId;
   let delivererId = req.body.delivererId;
   let requestUserId = req.body.requestUserId;
+  let orderId = req.body.orderId;
   let comment = req.body.comment;
   let score = req.body.score;
 
   // comment 등록 / User Score 및 리뷰 총 갯수 up / Delivers db review tab -> T
   db.Review.create({
+    order_id: orderId,
     writer_id: delivererId,
     user_id: requestUserId,
     comment: comment,
@@ -270,71 +272,83 @@ router.put("/:id", async (req, res) => {
   else if (kind == "finish") {
     let delivererId = req.body.delivererId; // 운송원 id
     let orderPrice = req.body.orderPrice; // 운송 물품 가격
-    // deliver status 값 => D
-    db.Deliver.update({ status: "D" }, { where: { id: deliverId } })
-      .then(deliverResult => {
-        // order status 값 => E
-        db.Order.update({ status: "E" }, { where: { id: orderId } })
-          .then(orderResult => {
-            // 딜리버러 수익금 올려주기
-            db.User.update(
-              {
-                price: db.sequelize.literal(`price + ${orderPrice}`)
-              },
-              { where: { id: delivererId } }
-            )
-              .then(userResult => {
-                // push 알림
-                console.log(requestUser_fcmToken);
-                let message = {
-                  to: requestUser_fcmToken,
-                  notification: {
-                    title: "운송 종료!",
-                    body:
-                      "운송을 종료합니다.\n딜리버러가 마음에 드셨나요? 리뷰를 남겨주세요"
-                  },
-                  data: {
-                    title: "finish",
-                    body: orderId,
-                    click_action: "FLUTTER_NOTIFICATION_CLICK"
-                  }
-                };
-                fcm.send(message, (err, response) => {
-                  if (err) {
-                    console.log("Something has gone wrong!");
-                    console.log(err);
-                    res.json({
-                      code: -1,
-                      err
-                    });
-                  } else {
-                    res.json({
-                      code: 200,
-                      result: true
-                    });
-                  }
+    console.log("delivers finish");
+    db.Deliver.findOne({
+      include: [
+        { model: db.Order },
+        { model: db.User, as: "requestUser" },
+        { model: db.User, as: "deliverUser" },
+      ],
+      where: { id: deliverId },
+    }).then(result => {
+      console.log(result);
+      // deliver status 값 => D
+      db.Deliver.update({ status: "D" }, { where: { id: deliverId } })
+        .then(deliverResult => {
+          // order status 값 => E
+          db.Order.update({ status: "E" }, { where: { id: orderId } })
+            .then(orderResult => {
+              // 딜리버러 수익금 올려주기
+              db.User.update(
+                {
+                  price: db.sequelize.literal(`price + ${orderPrice}`)
+                },
+                { where: { id: delivererId } }
+              )
+                .then(userResult => {
+                  // push 알림
+                  console.log(requestUser_fcmToken);
+                  let message = {
+                    to: requestUser_fcmToken,
+                    notification: {
+                      title: "운송 종료!",
+                      body:
+                        "운송을 종료합니다.\n딜리버러가 마음에 드셨나요? 리뷰를 남겨주세요"
+                    },
+                    data: {
+                      title: "finish",
+                      body: result,
+                      click_action: "FLUTTER_NOTIFICATION_CLICK"
+                    }
+                  };
+                  fcm.send(message, (err, response) => {
+                    if (err) {
+                      console.log("Something has gone wrong!");
+                      console.log(err);
+                      res.json({
+                        code: -1,
+                        err
+                      });
+                    } else {
+                      console.log("발송 성공");
+                    }
+                  });
+                  res.json({
+                    code: 200,
+                    result: true
+                  });
+                })
+                .catch(err => {
+                  res.json({
+                    code: -1,
+                    err: "user update err"
+                  });
                 });
-              })
-              .catch(err => {
-                res.json({
-                  code: -1,
-                  err: "user update err"
-                });
+            })
+            .catch(err => {
+              res.json({
+                code: -1,
+                err: "order update err"
               });
-          })
-          .catch(err => {
-            res.json({
-              code: -1,
-              err: "order update err"
             });
+        })
+        .catch(err => {
+          res.json({
+            code: -1,
+            err: "deliver update err"
           });
-      })
-      .catch(err => {
-        res.json({
-          code: -1,
-          err: "deliver update err"
         });
-      });
+    });
   }
 });
 
@@ -397,16 +411,16 @@ router.get("/history/finish/:id", (req, res) => {
   db.Deliver.findAll({
     where: { delivererId: req.params.id, status: "D" },
     include: [
-      {model : db.User, as: "requestUser"},
-      {model : db.User, as: "deliverUser"},
-      {model : db.Order},
-    ] 
+      { model: db.User, as: "requestUser" },
+      { model: db.User, as: "deliverUser" },
+      { model: db.Order }
+    ]
   }).then(result => {
     // console.log(result);
     res.json({
-      code : 200,
+      code: 200,
       result
-    })
+    });
   });
 });
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////

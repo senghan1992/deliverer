@@ -21,6 +21,83 @@ AWS.config.update({
   region: config.aws.region
 });
 
+// 발송자 운송자 평가
+router.post("/review", (req,res) => {
+  let deliverId = req.body.deliverId;
+  let delivererId = req.body.delivererId;
+  let requestUserId = req.body.requestUserId;
+  let comment = req.body.comment;
+  let score = req.body.score;
+  let orderId = req.body.orderId;
+
+  db.Review.create({
+    order_id: orderId,
+    writer_id: requestUserId,
+    user_id: delivererId,
+    comment: comment,
+    score: score
+  })
+    .then(reviewResult => {
+      // console.log(reviewResult);
+      if (reviewResult) {
+        db.User.update(
+          {
+            star: db.sequelize.literal(`star + ${score}`),
+            star_total: db.sequelize.literal(`star_total + 1`)
+          },
+          { where: { id: delivererId } }
+        )
+          .then(userStarResult => {
+            // console.log(userStarResult);
+            if (userStarResult) {
+              db.Order.update(
+                { delivererReview: "T" },
+                { where: { id: orderId } }
+              )
+                .then(orderResult => {
+                  if (orderResult) {
+                    res.json({
+                      code: 200
+                    });
+                  } else {
+                    res.json({
+                      code: 999
+                    });
+                  }
+                })
+                .catch(err => {
+                  res.json({
+                    code: 999,
+                    err
+                  });
+                });
+            } else {
+              res.json({
+                code: 999
+              });
+            }
+          })
+          .catch(err => {
+            res.json({
+              code: 999,
+              err
+            });
+          });
+      } else {
+        res.json({
+          code: 999
+        });
+      }
+      // if(reviewResult.id)
+    })
+    .catch(err => {
+      res.json({
+        code: 999,
+        err
+      });
+    });
+});
+
 // 발송내역 detail
 router.get("/:id", (req, res) => {
   console.log("/orders/:id : get");
