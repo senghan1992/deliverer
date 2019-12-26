@@ -49,24 +49,24 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: "운송 상태값"
     },
-    createdAt: {
-      type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      //note here this is the guy that you are looking for
-      // get() {
-      //   return moment(this.getDataValue("createdAt")).format(
-      //     "llll"
-      //   );
-      // }
-    },
-    updatedAt: {
-      type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      // get() {
-      //   return moment(this.getDataValue("updatedAt")).format(
-      //     "llll"
-      //   );
-      // }
-    }
+    // createdAt: {
+    //   type: "TIMESTAMP",
+    //   defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
+    //   //note here this is the guy that you are looking for
+    //   // get() {
+    //   //   return moment(this.getDataValue("createdAt")).format(
+    //   //     "llll"
+    //   //   );
+    //   // }
+    // },
+    // updatedAt: {
+    //   type: "TIMESTAMP",
+    //   defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
+    //   // get() {
+    //   //   return moment(this.getDataValue("updatedAt")).format(
+    //   //     "llll"
+    //   //   );
+    //   // }
+    // }
   });
 };

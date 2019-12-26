@@ -10,12 +10,16 @@ const timeout = require("connect-timeout");
 // sequelize
 const sequelize = require("./models").sequelize;
 
-var indexRouter = require("./routes/index");
-let orderRouter = require("./routes/orders");
-let deliverRouter = require("./routes/delivers");
-var usersRouter = require("./routes/users");
+const indexRouter = require("./routes/index");
+const orderRouter = require("./routes/orders");
+const deliverRouter = require("./routes/delivers");
+const usersRouter = require("./routes/users");
+const paymentRouter = require("./routes/payments");
+const couponRouter = require("./routes/coupons");
 
-var app = express();
+const app = express();
+
+// const check = require("./middleware/login_check");
 
 sequelize.sync();
 
@@ -30,21 +34,26 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(fileUpload());
-app.use(timeout('10s'));
+app.use(timeout("10s"));
+app.use((req, res, next) => {
+  if (!req.timedout) next();
+});
 
 app.use("/", indexRouter);
 app.use("/api/v1/orders", orderRouter);
 app.use("/api/v1/delivers", deliverRouter);
 app.use("/api/v1/users", usersRouter);
+app.use("/api/v1/payments", paymentRouter);
+app.use("/api/v1/coupons", couponRouter);
 
 // handle time out error
-app.use(function(req, res, next) {
-  if (!req.timedout)
-    res.json({
-      code: 408,
-      msg: "네트워크 연결이 지연됩니다. 다시시도해주세요"
-    });
-});
+// app.use(function(req, res, next) {
+//   if (!req.timedout)
+//     res.json({
+//       code: 408,
+//       msg: "네트워크 연결이 지연됩니다. 다시시도해주세요"
+//     });
+// });
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

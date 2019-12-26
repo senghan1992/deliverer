@@ -20,6 +20,20 @@ AWS.config.update({
   region: config.aws.region
 });
 
+// 아임포트 config
+const { Iamporter, IamporterError } = require("iamporter");
+const iamport_config = require("../config/iamport_config");
+const iamporter = new Iamporter({
+  apiKey: iamport_config.iamport_config.apiKey,
+  secret: iamport_config.iamport_config.apiSecretKey
+});
+
+// 로그인 체크
+const check = require("../middleware/login_check");
+
+// 시간
+const moment = require("moment");
+
 /* GET home page. */
 
 // 발송자 리뷰
@@ -277,9 +291,9 @@ router.put("/:id", async (req, res) => {
       include: [
         { model: db.Order },
         { model: db.User, as: "requestUser" },
-        { model: db.User, as: "deliverUser" },
+        { model: db.User, as: "deliverUser" }
       ],
-      where: { id: deliverId },
+      where: { id: deliverId }
     }).then(result => {
       console.log(result);
       // deliver status 값 => D
@@ -297,7 +311,7 @@ router.put("/:id", async (req, res) => {
               )
                 .then(userResult => {
                   // push 알림
-                  console.log(requestUser_fcmToken);
+                  // console.log(requestUser_fcmToken);
                   let message = {
                     to: requestUser_fcmToken,
                     notification: {
@@ -365,7 +379,7 @@ router.get("/:id", (req, res) => {
     where: { id: deliverId }
   })
     .then(result => {
-      console.log(result);
+      // console.log(result);
       res.json({
         code: 200,
         result
@@ -380,7 +394,7 @@ router.get("/:id", (req, res) => {
 });
 
 // 운송 내역 리스트
-router.get("/history/:id", function(req, res) {
+router.get("/history/:id", check.loginCheck, function(req, res) {
   console.log("/delivers : get");
   let delivererId = req.params.id;
   db.Deliver.findAll({
@@ -426,7 +440,7 @@ router.get("/history/finish/:id", (req, res) => {
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // 매칭하기
-router.post("/", (req, res) => {
+router.post("/", check.loginCheck, (req, res) => {
   let orderId = parseInt(req.body.orderId);
   let delivererId = parseInt(req.body.delivererId);
   let requestId = parseInt(req.body.requestId);
@@ -434,79 +448,203 @@ router.post("/", (req, res) => {
   // console.log(typeof parseInt(orderId));
   // console.log(typeof(int(delivererId)));
 
-  // db.Order.findOne({where:{id:params_id}})
-  // Order update
-  // Deliver create
-  db.Deliver.create({
-    delivererId: delivererId,
-    requestId: requestId,
-    orderId: orderId,
-    status: "A"
+  db.Order.findOne({
+    where: { id: orderId }
   })
-    .then(deliver => {
-      // console.log(deliver);
-      db.Order.update(
-        {
-          status: "B"
-        },
-        {
-          where: {
-            id: orderId
-          }
-        }
-      )
-        .then(data => {
-          // console.log(data);
-          db.User.findOne({ where: { id: requestId } }).then(
-            requestUserResult => {
-              // console.log(requestUserResult.fcm_token);
-              // 요청자에게 매칭 성사되었다는 알림
-              let message = {
-                to: requestUserResult.fcm_token,
-                notification: {
-                  title: "매칭 성공!",
-                  body: "매칭이 완료되었습니다. 운송을 시작합니다"
-                },
-                data: {
-                  title: "match",
-                  body: orderId,
-                  click_action: "FLUTTER_NOTIFICATION_CLICK"
-                }
-              };
-              fcm.send(message, (err, response) => {
-                if (err) console.log("Something has gone wrong!");
-                else
-                  console.log("Successfully sent with response : ", response);
-              });
-
-              // 요청자 카드로 결제
-              ////////////////////////////////
-
-              res.json({
-                code: 200,
-                result: true,
-                data
-              });
-            }
-          );
+    .then(async order_result => {
+      const merchant_uid = `deliverer_${moment(new Date()).format(
+        "YYYYMMDDHHmmss"
+      )}_${orderId}`;
+      // console.log(order_result);
+      const bill_result = await iamporter
+        .paySubscription({
+          customer_uid: order_result.cardName,
+          merchant_uid: merchant_uid,
+          amount: order_result.price
         })
         .catch(err => {
+          if (err instanceof IamporterError) console.log(err);
+          // 에러 났을 경우
           res.json({
             code: -1,
-            result: false,
-            data: err
+            err
           });
         });
+      // console.log(bill_result.raw.response.merchant_uid);
+      // return;
+      if (
+        bill_result.raw.code == 0 &&
+        bill_result.status == 200 &&
+        bill_result.raw.response.status == "paid"
+      ) {
+        db.CustomerPayment.create({
+          user_id: req.user.id,
+          order_id: orderId,
+          merchant_id: bill_result.raw.response.merchant_uid,
+          amount: bill_result.raw.response.amount
+        }).then(customer_payment => {
+          if (customer_payment) {
+            // console.log(customer_payment);
+            // return;
+            db.Deliver.create({
+              delivererId: delivererId,
+              requestId: requestId,
+              orderId: orderId,
+              status: "A"
+            }).then(deliver => {
+              // console.log(deliver);
+              db.Order.update(
+                { status: "B", merchant_uid: merchant_uid },
+                { where: { id: orderId } }
+              )
+                .then(data => {
+                  // console.log(data);
+                  db.User.findOne({ where: { id: requestId } }).then(
+                    requestUserResult => {
+                      // 요청자 카드로 결제
+                      // console.log(requestUserResult.fcm_token);
+                      // 요청자에게 매칭 성사되었다는 알림
+                      let message = {
+                        to: requestUserResult.fcm_token,
+                        notification: {
+                          title: "매칭 성공!",
+                          body: "매칭이 완료되었습니다. 운송을 시작합니다"
+                        },
+                        data: {
+                          title: "match",
+                          body: orderId,
+                          click_action: "FLUTTER_NOTIFICATION_CLICK"
+                        }
+                      };
+                      fcm.send(message, (err, response) => {
+                        if (err) console.log("Something has gone wrong!");
+                        else
+                          console.log(
+                            "Successfully sent with response : ",
+                            response
+                          );
+                      });
+                      ////////////////////////////////
+                      res.json({
+                        code: 200,
+                        result: true,
+                        data
+                      });
+                    }
+                  );
+                })
+                .catch(err => {
+                  res.json({
+                    code: -1,
+                    err
+                  });
+                });
+            });
+          } else {
+            res.json({
+              code: -1,
+              err: "구매 정보 저장 실패"
+            });
+          }
+        });
+      } else {
+        res.json({
+          code: 999,
+          err: bill_result.raw.response.fail_reason
+        });
+      }
     })
     .catch(err => {
+      // 오류시 승인 취소 해줘야한다
+
       res.json({
         code: -1,
-        result: false,
-        data: err
+        err
       });
     });
 
   // res.json({result : true});
+});
+
+// 매칭 취소
+router.delete("/:id", check.loginCheck, (req, res) => {
+  db.Deliver.findOne({
+    where: { id: req.params.id },
+    include: [{ model: db.Order, include: [{ model: db.User }] }]
+  }).then(async deliver_result => {
+    console.log(deliver_result.order);
+    const cancel_result = await iamporter
+      .cancelByMerchantUid(deliver_result.order.merchant_uid)
+      .catch(err => {
+        res.json({
+          code: 600,
+          err
+        });
+      });
+    if (
+      cancel_result.status == 200 &&
+      cancel_result.raw.code == 0 &&
+      cancel_result.raw.response.status == "cancelled"
+    ) {
+      db.CustomerPayment.update(
+        {
+          is_canceled: true,
+          cancel_amount: deliver_result.order.price,
+          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+        },
+        { where: { merchant_id: deliver_result.order.merchant_uid } }
+      ).then(customer_payment_result => {
+        db.Order.update(
+          {
+            status: "A",
+            updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+          },
+          { where: { id: deliver_result.order.id } }
+        ).then(order_result => {
+          db.Deliver.update(
+            { status: "F" },
+            { where: { id: req.params.id } }
+          ).then(async deliver_update_result => {
+            if (deliver_update_result) {
+              let message = {
+                to: deliver_result.order.user.fcm_token,
+                notification: {
+                  title: "운송 취소!",
+                  body: "운송자가 운송을 취소하였습니다."
+                },
+                data: {
+                  title: "cancel_deliver_user",
+                  body: '999',
+                  click_action: "FLUTTER_NOTIFICATION_CLICK"
+                }
+              };
+
+              fcm.send(message, (err, response) => {
+                if (err) {
+                  if (err) console.log(err);
+                  res.json({
+                    code: -1,
+                    err
+                  });
+                } else
+                  console.log("Successfully sent with response : ", response);
+              });
+
+              res.json({
+                code: 200,
+                msg: "윤송자 요청 취소 성공"
+              });
+            }
+          });
+        });
+      });
+    } else {
+      res.json({
+        code: 999,
+        msg: "승인 취소중 오류가 발생하였습니다. 다시 시도해주세요"
+      });
+    }
+  });
 });
 
 module.exports = router;

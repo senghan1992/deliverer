@@ -27,6 +27,11 @@ AWS.config.update({
   region: config.aws.region
 });
 
+// 아임포트 설정
+const { Iamporter, IamporterError } = require("iamporter");
+const iamport_config = require("../config/iamport_config");
+const axios = require("axios").default;
+
 // user profile image update
 router.put("/:id", check.loginCheck, async (req, res) => {
   // console.log("ㅇㅕ기 진입");
@@ -86,50 +91,170 @@ router.put("/:id", check.loginCheck, async (req, res) => {
           err
         });
       });
+  } else if (kind == "drop") {
+    db.User.update({ status: "F" }, { where: { id: userId } })
+      .then(result => {
+        res.json({
+          code: 200,
+          result
+        });
+      })
+      .catch(err => {
+        res.json({
+          code: 999,
+          err
+        });
+      });
+  }
+});
+
+// 회원가입시에 계좌 본인 확인하기
+router.post("/account", async (req, res) => {
+  let bank_code = req.body.bank_code;
+  let bank_num = req.body.bank_num;
+  let user_name = req.body.user_name;
+
+  // console.log(req.body);
+
+  const iamporter = new Iamporter({
+    apiKey: iamport_config.iamport_config.apiKey,
+    secret: iamport_config.iamport_config.apiSecretKey
+  });
+
+  const iamportTokenData = await iamporter.getToken();
+  const iamportToken = iamportTokenData.data.access_token;
+  // console.log(iamportToken);
+  const vbanksResult = await axios({
+    url: `https://api.iamport.kr/vbanks/holder?bank_code=${bank_code}&bank_num=${bank_num}`,
+    headers: {
+      Authorization: `Bearer ${iamportToken}`
+    }
+  }).catch(err => {
+    console.log(err);
+    res.json({
+      code: -1,
+      msg: err.response.data.message
+    });
+  });
+
+  // console.log(vbanksResult.data);
+  if (vbanksResult.data.code == 0) {
+    // 성공! 유저 이름과 비교
+    // console.log(vbanksResult.data);
+    let bank_holder = vbanksResult.data.response.bank_holder;
+    if (bank_holder == user_name) {
+      res.json({
+        code: 200,
+        data: {
+          name: bank_holder
+        },
+        msg: "등록이 완료되었습니다"
+      });
+    } else {
+      res.json({
+        code: -1,
+        msg: "본인명의 계좌 등록만 가능합니다"
+      });
+    }
   }
 });
 
 // user profile account update
-router.put("/account/:id", (req, res) => {
-  let userId = req.params.id;
-  User.update(
-    { bank: req.body.bank, bankNum: req.body.bankNum },
-    { where: { id: userId } }
-  ).then(result => {
+router.put("/account/:id", check.loginCheck, async (req, res) => {
+  let bank_code = req.body.bank_code;
+  let bank_num = req.body.bank_num;
+
+  const iamporter = new Iamporter({
+    apiKey: iamport_config.iamport_config.apiKey,
+    secret: iamport_config.iamport_config.apiSecretKey
+  });
+
+  const iamportTokenData = await iamporter.getToken();
+  const iamportToken = iamportTokenData.data.access_token;
+  // console.log(iamportToken);
+  const vbanksResult = await axios({
+    url: `https://api.iamport.kr/vbanks/holder?bank_code=${bank_code}&bank_num=${bank_num}`,
+    headers: {
+      Authorization: `Bearer ${iamportToken}`
+    }
+  }).catch(err => {
+    console.log(err.response.data.message);
     res.json({
-      code: 200,
-      result
+      code: -1,
+      msg: err.response.data.message
     });
   });
+
+  // console.log(vbanksResult.data);
+  if (vbanksResult.data.code == 0) {
+    // 성공! 유저 이름과 비교
+    console.log(vbanksResult.data);
+    let bank_holder = vbanksResult.data.response.bank_holder;
+    if (bank_holder == req.user.name) {
+      User.update(
+        { bank: bank_code, bankNum: bank_num },
+        { where: { id: req.user.id } }
+      ).then(result => {
+        res.json({
+          code: 200,
+          data: {
+            name: bank_holder
+          },
+          msg: "등록이 완료되었습니다"
+        });
+      });
+    } else {
+      res.json({
+        code: -1,
+        msg: "본인명의 계좌 등록만 가능합니다"
+      });
+    }
+  }
 });
 
 // user 정보 가지고 오기 (발송 건수, 운송 건수, 기본 정보)
-router.get("/:id", (req, res) => {
-  db.User.findOne({where : {id : req.params.id}})
-  // db.User.findOne({ where: { id: req.params.id } })
-  .then (result => {
-    // console.log(result);
-    db.sequelize
-      .query(
-        `select count(*) as count from orders where requestId = ${req.params.id}`,
-        { type: db.sequelize.QueryTypes.SELECT }
-      )
-      .then(order_result => {
-        db.sequelize
-          .query(
-            `select count(*) as count from delivers where delivererId = ${req.params.id}`,
-            { type: db.sequelize.QueryTypes.SELECT }
-          )
-          .then(deliver_result => {
-            res.json({
-              code: 200,
-              user: result,
-              order_result: order_result[0]["count"],
-              deliver_result: deliver_result[0]["count"]
+router.get("/:id", check.loginCheck, async (req, res) => {
+  await db.User.update(
+    { updatedAt: db.sequelize.fn("NOW") },
+    { where: { id: req.user.id } }
+  );
+  db.User.findOne({ where: { id: req.user.id } })
+    // db.User.findOne({ where: { id: req.params.id } })
+    .then(result => {
+      // console.log(result);
+      db.sequelize
+        .query(
+          `select count(*) as count from orders where requestId = ${req.user.id}`,
+          { type: db.sequelize.QueryTypes.SELECT }
+        )
+        .then(order_result => {
+          db.sequelize
+            .query(
+              `select count(*) as count from delivers where delivererId = ${req.user.id}`,
+              { type: db.sequelize.QueryTypes.SELECT }
+            )
+            .then(deliver_result => {
+              db.Payment.findAll({
+                where: { userId: req.user.id },
+                order: [["updatedAt", "DESC"]]
+              }).then(payment_result => {
+                db.CouponUsage.findAll({
+                  where: { user_id: req.user.id, is_used: 0 },
+                  include: [db.Coupon]
+                }).then(coupon_result => {
+                  res.json({
+                    code: 200,
+                    user: result,
+                    order_result: order_result[0]["count"],
+                    deliver_result: deliver_result[0]["count"],
+                    payment_result,
+                    coupon_result
+                  });
+                });
+              });
             });
-          });
-      });
-  });
+        });
+    });
 });
 
 /* GET users listing. */
@@ -148,25 +273,32 @@ router.post("/login", (req, res) => {
 
   User.findOne({ where: { phone: phone } }).then(user_result => {
     if (user_result) {
-      bcrypt.compare(password, user_result.password).then(result => {
-        if (result) {
-          const token = jwt.sign(
-            { user: user_result },
-            jwt_config.jwt_config.secret,
-            { expiresIn: "30 days" }
-          );
-          res.json({
-            code: 200,
-            user: user_result,
-            token
-          });
-        } else {
-          res.json({
-            code: 401,
-            msg: "아이디 혹은 비밀번호를 확인해주세요"
-          });
-        }
-      });
+      if (user_result.status == "F") {
+        res.json({
+          code: 600,
+          msg: "탈퇴한 회원 고객센터 문의 요망"
+        });
+      } else {
+        bcrypt.compare(password, user_result.password).then(result => {
+          if (result) {
+            const token = jwt.sign(
+              { user: user_result },
+              jwt_config.jwt_config.secret,
+              { expiresIn: "30 days" }
+            );
+            res.json({
+              code: 200,
+              user: user_result,
+              token
+            });
+          } else {
+            res.json({
+              code: 401,
+              msg: "아이디 혹은 비밀번호를 확인해주세요"
+            });
+          }
+        });
+      }
     } else {
       res.json({
         code: 404,
@@ -203,10 +335,25 @@ router.post("/regist", (req, res) => {
     // user 전화번호로 가입 되어 있는 아이디 있는지 확인
     User.findOne({ where: { phone: phone } }).then(user_check_result => {
       if (user_check_result) {
-        res.json({
-          code: 400,
-          msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
-        });
+        if (user_check_result.status == "A") {
+          res.json({
+            code: 400,
+            msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
+          });
+        }
+        if (user_check_result.status == "D") {
+          res.json({
+            code: 400,
+            msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
+          });
+        }
+        if (user_check_result.status == "F") {
+          res.json({
+            code: 600,
+            msg: "탈퇴한 회원 재가입시 문의 요망"
+          });
+        }
+        return;
       } else {
         User.create({
           name,
@@ -244,16 +391,31 @@ router.post("/regist", (req, res) => {
     });
   } else if (kind == "1") {
     let profile = req.files.profile;
-    console.log(profile);
+    // console.log(profile);
     // 일단 회원 저장
     // 회원 id 값 나오면 파일 이름 변경해서 aws 저장
     // aws 저장한 파일명 회원 DB 변경
     User.findOne({ where: { phone: phone } }).then(user_check_result => {
       if (user_check_result) {
-        res.json({
-          code: 400,
-          msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
-        });
+        if (user_check_result.status == "A") {
+          res.json({
+            code: 400,
+            msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
+          });
+        }
+        if (user_check_result.status == "D") {
+          res.json({
+            code: 400,
+            msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
+          });
+        }
+        if (user_check_result.status == "F") {
+          res.json({
+            code: 600,
+            msg: "탈퇴한 회원 재가입시 문의 요망"
+          });
+        }
+        return;
       } else {
         User.create({
           name,

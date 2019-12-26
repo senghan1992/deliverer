@@ -118,7 +118,7 @@ module.exports = (sequelize, DataTypes) => {
       comment: "금액"
     },
     cardName: {
-      type: DataTypes.STRING(10),
+      type: DataTypes.STRING(200),
       allowNull: true,
       comment: "사용자 카드 이름"
     },
@@ -128,25 +128,30 @@ module.exports = (sequelize, DataTypes) => {
       comment: "쿠폰 번호"
     },
     delivererReview: {
-        type : DataTypes.ENUM('T','F'),
-        allowNull : false,
-        defaultValue : 'F',
-        comment : '운송자 리뷰'
+      type: DataTypes.ENUM("T", "F"),
+      allowNull: false,
+      defaultValue: "F",
+      comment: "운송자 리뷰"
     },
-    createdAt: {
-      type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      //note here this is the guy that you are looking for
-      // get() {
-      //     return moment(this.getDataValue('createdAt')).format('YYYY/MM/DD');
-      // }
+    merchant_uid: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: "매칭시 주문 번호"
     },
-    updatedAt: {
-      type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      // get() {
-      //     return moment(this.getDataValue('updatedAt')).format('YYYY/MM/DD');
-      // }
-    }
+    // createdAt: {
+    //   type: "TIMESTAMP",
+    //   defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
+    //   //note here this is the guy that you are looking for
+    //   // get() {
+    //   //     return moment(this.getDataValue('createdAt')).format('YYYY/MM/DD');
+    //   // }
+    // },
+    // updatedAt: {
+    //   type: "TIMESTAMP",
+    //   defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
+    //   // get() {
+    //   //     return moment(this.getDataValue('updatedAt')).format('YYYY/MM/DD');
+    //   // }
+    // }
   });
 };

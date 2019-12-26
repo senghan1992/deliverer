@@ -77,6 +77,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: "유저 fcm token"
     },
+    status: {
+      type: DataTypes.ENUM("A", "D", "F"),
+      allowNull: false,
+      comment: "유저 상태값 A : 활성 / D : 휴면 / F : 탈퇴",
+      defaultValue: "A"
+    },
     createdAt: {
       type: "TIMESTAMP",
       defaultValue: sequelize.literal("CURRENT_TIMESTAMP")

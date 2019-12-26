@@ -50,29 +50,82 @@ db.Order = require("./order")(sequelize, Sequelize);
 db.Deliver = require("./deliver")(sequelize, Sequelize);
 db.User = require("./user")(sequelize, Sequelize);
 db.Review = require("./review")(sequelize, Sequelize);
+db.Payment = require("./payment")(sequelize, Sequelize);
+db.Coupon = require("./coupon")(sequelize, Sequelize);
+db.CouponUsage = require("./coupon_usage")(sequelize, Sequelize);
+db.CustomerPayment = require("./customer_payment")(sequelize, Sequelize);
 
+db.Order.belongsTo(db.User, { foreignKey: "requestId", constraints: false });
 db.Order.hasOne(db.Deliver);
-db.Order.hasOne(db.User, { foreignKey: "requestId", sourceKey: "id" });
+// db.Order.belongsTo(db.Deliver, { foreignKey: "id", targetKey: "orderId" });
 
+db.Deliver.belongsTo(db.Order, {
+  foreignKey: "orderId",
+  constraints: false
+});
 db.Deliver.belongsTo(db.User, {
   as: "deliverUser",
-  foreignKey: "delivererId"
-  // sourceKey: "id"
+  foreignKey: "delivererId",
+  constraints: false
 });
 db.Deliver.belongsTo(db.User, {
   as: "requestUser",
-  foreignKey: "requestId"
-  // sourceKey: "id"
+  foreignKey: "requestId",
+  constraints: false
+  // foreignKey: "id"
 });
-db.Deliver.belongsTo(db.Order, { foreignKey: "orderId" });
 
 db.Review.belongsTo(db.User, {
   as: "writerUser",
-  foreignKey: "writer_id"
+  foreignKey: "writer_id",
+  constraints: false
 });
 db.Review.belongsTo(db.User, {
   as: "user",
-  foreignKey: "user_id"
+  foreignKey: "user_id",
+  constraints: false
 });
+
+db.User.hasMany(db.Payment, { foreignKey: "userId", sourceKey: "id" });
+
+db.CouponUsage.belongsTo(db.Coupon, {
+  foreignKey: "coupon_code",
+  sourceKey: "coupon_code"
+});
+
+// db.Order.hasOne(db.Deliver);
+// db.Order.hasOne(db.User, { sourceKey: "requestId", targetKey: "id" });
+
+// db.Deliver.belongsTo(db.User, {
+//   as: "deliverUser",
+//   targetKey: "id",
+//   sourceKey: "delivererId"
+//   // sourceKey: "id"
+// });
+// db.Deliver.belongsTo(db.User, {
+//   as: "requestUser",
+//   targetKey: "id",
+//   sourceKey: "requestId"
+//   // sourceKey: "id"
+// });
+// db.Deliver.belongsTo(db.Order, { targetKey: "id", sourceKey: "orderId" });
+
+// db.Review.belongsTo(db.User, {
+//   as: "writerUser",
+//   targetKey: "id",
+//   sourceKey: "writer_id"
+// });
+// db.Review.belongsTo(db.User, {
+//   as: "user",
+//   targetKey: "id",
+//   sourceKey: "user_id"
+// });
+
+// db.User.belongsTo(db.Payment, { sourceKey: "id", targetKey: "userId" });
+
+// db.CouponUsage.belongsTo(db.Coupon, {
+//   targetKey: "coupon_code",
+//   sourceKey: "coupon_code"
+// });
 
 module.exports = db;
