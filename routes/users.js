@@ -32,6 +32,9 @@ const { Iamporter, IamporterError } = require("iamporter");
 const iamport_config = require("../config/iamport_config");
 const axios = require("axios").default;
 
+// 본인인증 callback
+// router
+
 // user profile image update
 router.put("/:id", check.loginCheck, async (req, res) => {
   // console.log("ㅇㅕ기 진입");

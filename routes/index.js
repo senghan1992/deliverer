@@ -21,6 +21,9 @@ router.get('/location', (req,res) => {
 router.get('/person', (req,res) => {
   res.render("person");
 });
+router.get('/test', (req,res) => {
+  res.render("test");
+});
 
 // router.post("/test", (req, res) => {
 //   // 요청자에게 매칭 성사되었다는 알림
