@@ -33,7 +33,73 @@ const iamport_config = require("../config/iamport_config");
 const axios = require("axios").default;
 
 // 본인인증 callback
-// router
+router.post("/certificate", async (req, res) => {
+  let imp_uid = req.body.imp_uid;
+  try {
+    const getToken = await axios({
+      url: "https://api.iamport.kr/users/getToken",
+      method: "post",
+      headers: { "Content-Type": "application/json" },
+      data: {
+        imp_key: "2586720024990948",
+        imp_secret:
+          "mwnCrEKHcymVNnX3QUYSPsJaUjuEGac3GAF8eqQqYcmMAjPqeOj3g3eamIP3S26zCMIRcyhbLEXlXNMc"
+      }
+    });
+
+    const { access_token } = getToken.data.response;
+
+    // imp_uid로 인증 정보 조회
+    const getCertifications = await axios({
+      url: `https://api.iamport.kr/certifications/${imp_uid}`,
+      method: "get",
+      headers: { Authorization: access_token }
+    }).catch(err => {
+      res.json({
+        code: -1,
+        err
+      });
+    });
+
+    const certificationsInfo = getCertifications.data.response;
+    // console.log(certificationsInfo);
+
+    // return;
+
+    const {
+      unique_key,
+      unique_in_site,
+      name,
+      gender,
+      birthday
+    } = certificationsInfo;
+
+    // // 연령 제한 로직
+    // if (new Date(birth).getFullYear() <= 1999) {
+    //   // 연령 만족
+    // } else {
+    //   // 연령 미달
+    // }
+
+    // 1인 1계정 허용 로직도 여기서 사용가능
+    res.json({
+      code: 200,
+      data: {
+        name: name,
+        birth: birthday,
+        gender: gender
+      }
+    });
+
+    // console.log("res.json 나갔다");
+  } catch (e) {
+    console.error(e);
+    res.json({
+      code: -1,
+      err
+    });
+  }
+});
 
 // user profile image update
 router.put("/:id", check.loginCheck, async (req, res) => {
@@ -216,7 +282,7 @@ router.put("/account/:id", check.loginCheck, async (req, res) => {
 });
 
 // user 정보 가지고 오기 (발송 건수, 운송 건수, 기본 정보)
-router.get("/:id", check.loginCheck, async (req, res) => {
+router.get("/", check.loginCheck, async (req, res) => {
   await db.User.update(
     { updatedAt: db.sequelize.fn("NOW") },
     { where: { id: req.user.id } }
@@ -489,6 +555,11 @@ router.post("/regist", (req, res) => {
       }
     });
   }
+});
+
+// 오픈 뱅킹 플랫폼 callback url
+router.post('/openbanking', (req,res) => {
+  
 });
 
 module.exports = router;

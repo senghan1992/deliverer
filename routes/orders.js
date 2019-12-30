@@ -109,20 +109,41 @@ router.post("/review", (req, res) => {
 });
 
 // 발송내역 detail
-router.get("/:id", (req, res) => {
+router.get("/:id", async (req, res) => {
   console.log("/orders/:id : get");
+
   let orderId = req.params.id;
-  db.Order.findOne({
-    include: [
-      { model: db.Deliver, include: [{ model: db.User, as: "deliverUser" }] }
-    ],
-    where: { id: orderId }
-  }).then(result => {
-    res.json({
-      code: 200,
-      result
+  console.log(`orderId >>> ${orderId}`);
+
+  var order = await db.Order.findOne({ where: { id: orderId } });
+
+  if (order.status == "A") {
+    db.Order.findOne({
+      where: { id: orderId }
+    }).then(result => {
+      res.json({
+        code: 200,
+        result
+      });
     });
-  });
+  } else {
+    db.Order.findOne({
+      include: [
+        {
+          model: db.Deliver,
+          where: { status: { [Op.ne]: "F" } },
+          include: [{ model: db.User, as: "deliverUser" }]
+        }
+      ],
+      where: { id: orderId, status: { [Op.ne]: "F" } }
+    }).then(result => {
+      // console.log(result);
+      res.json({
+        code: 200,
+        result
+      });
+    });
+  }
 });
 
 // 발송 내역 리스트
@@ -186,11 +207,11 @@ router.get("/history/finish/:id", (req, res) => {
 });
 
 // 요청 불러오기
-router.get("/", (req, res) => {
+router.get("/", check.loginCheck, (req, res) => {
   console.log("일단 여기는 들어온다");
   // console.log(req.params.id);
   // return;
-  let requestId = req.query.requestId;
+  let requestId = req.user.id;
 
   let deliverPickLatitude = req.query.deliverPickLatitude; //req.body.deliverPickLatitude;
   let deliverPickLongitude = req.query.deliverPickLongitude; //req.body.deliverPickLongitude;
@@ -239,7 +260,7 @@ router.get("/", (req, res) => {
       }
     )
     .then(data => {
-      // console.log(data);
+      console.log(data);
       res.json({
         code: 200,
         result: true,
