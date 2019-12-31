@@ -293,13 +293,13 @@ router.get("/", check.loginCheck, async (req, res) => {
       // console.log(result);
       db.sequelize
         .query(
-          `select count(*) as count from orders where requestId = ${req.user.id}`,
+          `select count(*) as count from orders where requestId = ${req.user.id} and status != 'F'`,
           { type: db.sequelize.QueryTypes.SELECT }
         )
         .then(order_result => {
           db.sequelize
             .query(
-              `select count(*) as count from delivers where delivererId = ${req.user.id}`,
+              `select count(*) as count from delivers where delivererId = ${req.user.id} and status != 'F'`,
               { type: db.sequelize.QueryTypes.SELECT }
             )
             .then(deliver_result => {

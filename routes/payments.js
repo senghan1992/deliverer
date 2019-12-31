@@ -28,7 +28,7 @@ router.delete("/:customer_uid", check.loginCheck ,async (req, res) => {
     });
 
   console.log(result);
-
+  
   // 내 DB에서도 삭제
   db.Payment.destroy({
     where: { customer_uid: req.params.customer_uid }

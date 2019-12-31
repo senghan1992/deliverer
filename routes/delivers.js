@@ -140,7 +140,7 @@ router.put("/:id", async (req, res) => {
       Body: req.files.pickUpImage.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
       ContentType: "image/png" // MIME 타입
     };
-    await S3.upload(param, (err, data) => {
+    S3.upload(param, (err, data) => {
       if (err) res.json({ result: false, msg: err });
     });
     // deliver status 변경
@@ -452,6 +452,11 @@ router.post("/", check.loginCheck, (req, res) => {
     where: { id: orderId }
   })
     .then(async order_result => {
+
+      if(order_result.status != 'A') {
+        // 이미 매칭된 건수입니다
+      }
+
       const merchant_uid = `deliverer_${moment(new Date()).format(
         "YYYYMMDDHHmmss"
       )}_${orderId}`;

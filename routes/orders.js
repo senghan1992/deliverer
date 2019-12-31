@@ -260,7 +260,7 @@ router.get("/", check.loginCheck, (req, res) => {
       }
     )
     .then(data => {
-      console.log(data);
+      // console.log(data);
       res.json({
         code: 200,
         result: true,
