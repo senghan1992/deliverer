@@ -2,6 +2,11 @@ const moment = require("moment");
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define("user", {
     // 모델 정의
+    email: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      comment: "이메일"
+    },
     name: {
       type: DataTypes.STRING,
       allowNull: false,

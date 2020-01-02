@@ -71,7 +71,8 @@ router.post("/certificate", async (req, res) => {
       unique_in_site,
       name,
       gender,
-      birthday
+      birthday,
+      phone
     } = certificationsInfo;
 
     // // 연령 제한 로직
@@ -87,7 +88,8 @@ router.post("/certificate", async (req, res) => {
       data: {
         name: name,
         birth: birthday,
-        gender: gender
+        gender: gender,
+        phone: phone
       }
     });
 
@@ -337,10 +339,10 @@ router.get("/", check.loginCheck, function(req, res, next) {
 
 // 로그인
 router.post("/login", (req, res) => {
-  let phone = req.body.phone;
+  let email = req.body.email;
   let password = req.body.password;
 
-  User.findOne({ where: { phone: phone } }).then(user_result => {
+  User.findOne({ where: { email: email } }).then(user_result => {
     if (user_result) {
       if (user_result.status == "F") {
         res.json({
@@ -382,6 +384,7 @@ router.post("/regist", (req, res) => {
   console.log("일단 여기 들어옴");
 
   let kind = req.body.kind;
+  let email = req.body.email;
   let name = req.body.name;
   let birth = req.body.birth;
   let phone = req.body.phone;
@@ -425,6 +428,7 @@ router.post("/regist", (req, res) => {
         return;
       } else {
         User.create({
+          email,
           name,
           birth,
           phone,
@@ -487,6 +491,7 @@ router.post("/regist", (req, res) => {
         return;
       } else {
         User.create({
+          email,
           name,
           birth,
           phone,
@@ -558,8 +563,6 @@ router.post("/regist", (req, res) => {
 });
 
 // 오픈 뱅킹 플랫폼 callback url
-router.post('/openbanking', (req,res) => {
-  
-});
+router.post("/openbanking", (req, res) => {});
 
 module.exports = router;
