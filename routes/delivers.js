@@ -452,8 +452,7 @@ router.post("/", check.loginCheck, (req, res) => {
     where: { id: orderId }
   })
     .then(async order_result => {
-
-      if(order_result.status != 'A') {
+      if (order_result.status != "A") {
         // 이미 매칭된 건수입니다
       }
 
@@ -572,84 +571,131 @@ router.post("/", check.loginCheck, (req, res) => {
 });
 
 // 매칭 취소
-router.delete("/:id", check.loginCheck, (req, res) => {
-  db.Deliver.findOne({
-    where: { id: req.params.id },
-    include: [{ model: db.Order, include: [{ model: db.User }] }]
-  }).then(async deliver_result => {
-    console.log(deliver_result.order);
+router.delete("/:id", check.loginCheck, async (req, res) => {
+  // cancel type에 따라 환불 정도가 달라진다
+  let cancel_type = req.query.cancelType;
+
+  if (cancel_type == "A") {
+    let deliver_result = await db.Deliver.findOne({
+      where: { id: req.params.id },
+      include: [{ model: db.Order, include: [{ model: db.User }] }]
+    });
+
     const cancel_result = await iamporter
       .cancelByMerchantUid(deliver_result.order.merchant_uid)
       .catch(err => {
         res.json({
           code: 600,
-          err
+          msg: "승인취소 중 오류가 발생하였습니다"
         });
       });
+
     if (
       cancel_result.status == 200 &&
       cancel_result.raw.code == 0 &&
       cancel_result.raw.response.status == "cancelled"
     ) {
-      db.CustomerPayment.update(
+      const customer_payment_result = await db.CustomerPayment.update(
         {
           is_canceled: true,
           cancel_amount: deliver_result.order.price,
           updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
         },
         { where: { merchant_id: deliver_result.order.merchant_uid } }
-      ).then(customer_payment_result => {
-        db.Order.update(
-          {
-            status: "A",
-            updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
-          },
-          { where: { id: deliver_result.order.id } }
-        ).then(order_result => {
-          db.Deliver.update(
-            { status: "F" },
-            { where: { id: req.params.id } }
-          ).then(async deliver_update_result => {
-            if (deliver_update_result) {
-              let message = {
-                to: deliver_result.order.user.fcm_token,
-                notification: {
-                  title: "운송 취소!",
-                  body: "운송자가 운송을 취소하였습니다."
-                },
-                data: {
-                  title: "cancel_deliver_user",
-                  body: '999',
-                  click_action: "FLUTTER_NOTIFICATION_CLICK"
-                }
-              };
-
-              fcm.send(message, (err, response) => {
-                if (err) {
-                  if (err) console.log(err);
-                  res.json({
-                    code: -1,
-                    err
-                  });
-                } else
-                  console.log("Successfully sent with response : ", response);
-              });
-
-              res.json({
-                code: 200,
-                msg: "윤송자 요청 취소 성공"
-              });
-            }
-          });
+      ).catch(err => {
+        res.json({
+          code: 600,
+          msg: "데이터 업데이트 중 오류가 발생하였습니다"
         });
       });
+
+      // 쿠폰 사용했으면 쿠폰 사용 돌려놓기
+      if (deliver_result.order.coupon != "") {
+        await db.CouponUsage.update(
+          {
+            is_used: false,
+            updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+          },
+          { where: { id: deliver_result.order.coupon } }
+        );
+      }
+
+      // order update
+      const order_update_result = await db.Order.update(
+        {
+          status: "A",
+          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+        },
+        { where: { id: deliver_result.order.id } }
+      ).catch(err => {
+        res.json({
+          code: 600,
+          msg: "데이터 업데이트 중 오류가 발생하였습니다"
+        });
+      });
+
+      // deliver update
+      const deliver_update_result = await db.Deliver.update(
+        {
+          status: "F",
+          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+        },
+        { where: { id: deliver_result.id } }
+      ).catch(err => {
+        res.json({
+          code: 600,
+          msg: "데이터 업데이트 중 오류가 발생하였습니다"
+        });
+      });
+
+      // request user push notification
+      let message = {
+        to: deliver_result.order.user.fcm_token,
+        notification: {
+          title: "운송 취소!",
+          body: "운송자가 운송을 취소하였습니다."
+        },
+        data: {
+          title: "cancel_deliver_user",
+          body: "999",
+          click_action: "FLUTTER_NOTIFICATION_CLICK"
+        }
+      };
+
+      fcm.send(message, (err, response) => {
+        if (err) {
+          if (err) console.log(err);
+          res.json({
+            code: -1,
+            err
+          });
+        } else console.log("Successfully sent with response : ", response);
+      });
+      //
+      if (
+        customer_payment_result &&
+        order_update_result &&
+        deliver_update_result
+      ) {
+        res.json({
+          code: 200,
+          msg: "운송을 취소하였습니다"
+        });
+      } else {
+        // 업데이트 상 문제가 생겼을 경우
+        res.json({
+          code: 600,
+          msg: "데이터 업데이트 중 오류가 발생하였습니다"
+        });
+      }
     } else {
       res.json({
         code: 999,
-        msg: "승인 취소중 오류가 발생하였습니다. 다시 시도해주세요"
+        msg: "승인 취소중 오류가 발생하였습니다. 다시 시도해주세요",
+        err
       });
     }
-  });
+  }
 });
 
 module.exports = router;

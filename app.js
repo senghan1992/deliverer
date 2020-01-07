@@ -37,6 +37,10 @@ app.use(fileUpload());
 app.use(timeout("10s"));
 app.use((req, res, next) => {
   if (!req.timedout) next();
+  else
+    res.status(503).json({
+      code: 503
+    });
 });
 
 app.use("/", indexRouter);

@@ -342,7 +342,10 @@ router.post("/login", (req, res) => {
   let email = req.body.email;
   let password = req.body.password;
 
-  User.findOne({ where: { email: email } }).then(user_result => {
+  // console.log(email);
+
+  db.User.findOne({ where: { email: email } }).then(user_result => {
+    console.log(user_result);
     if (user_result) {
       if (user_result.status == "F") {
         res.json({
@@ -357,10 +360,18 @@ router.post("/login", (req, res) => {
               jwt_config.jwt_config.secret,
               { expiresIn: "30 days" }
             );
-            res.json({
-              code: 200,
-              user: user_result,
-              token
+            db.User.update(
+              {
+                updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP"),
+                fcm_token: req.body.token
+              },
+              { where: { id: user_result.id } }
+            ).then(_ => {
+              res.json({
+                code: 200,
+                user: user_result,
+                token
+              });
             });
           } else {
             res.json({
@@ -427,39 +438,65 @@ router.post("/regist", (req, res) => {
         }
         return;
       } else {
-        User.create({
-          email,
-          name,
-          birth,
-          phone,
-          gender,
-          password,
-          bank,
-          bankNum,
-          agreementMust,
-          agreementChoice,
-          fcm_token
-        }).then(result => {
-          if (result) {
-            // 유저 생성 성공하면 jwt token 발행해서 return 해준다
-            const token = jwt.sign(
-              { user: result },
-              jwt_config.jwt_config.secret,
-              { expiresIn: "30 days" }
-            );
-            // console.log(token);
-            res.json({
-              code: 200,
-              user: result,
-              token
-            });
-          } else {
-            res.json({
-              code: 999,
-              msg: "시스템 오류"
-            });
+        User.findOne({ where: { email: email } }).then(
+          user_email_check_result => {
+            if (user_email_check_result) {
+              if (user_email_check_result.status == "A") {
+                res.json({
+                  code: 400,
+                  msg: "이미 사용중인 이메일입니다 로그인 해 주세요"
+                });
+              }
+              if (user_email_check_result.status == "D") {
+                res.json({
+                  code: 400,
+                  msg: "이미 사용중인 이베일입니다 로그인 해 주세요"
+                });
+              }
+              if (user_email_check_result.status == "F") {
+                res.json({
+                  code: 600,
+                  msg: "탈퇴한 회원 재가입시 문의 요망"
+                });
+              }
+              return;
+            } else {
+              User.create({
+                email,
+                name,
+                birth,
+                phone,
+                gender,
+                password,
+                bank,
+                bankNum,
+                agreementMust,
+                agreementChoice,
+                fcm_token
+              }).then(result => {
+                if (result) {
+                  // 유저 생성 성공하면 jwt token 발행해서 return 해준다
+                  const token = jwt.sign(
+                    { user: result },
+                    jwt_config.jwt_config.secret,
+                    { expiresIn: "30 days" }
+                  );
+                  // console.log(token);
+                  res.json({
+                    code: 200,
+                    user: result,
+                    token
+                  });
+                } else {
+                  res.json({
+                    code: 999,
+                    msg: "시스템 오류"
+                  });
+                }
+              });
+            }
           }
-        });
+        );
       }
     });
   } else if (kind == "1") {
@@ -490,79 +527,112 @@ router.post("/regist", (req, res) => {
         }
         return;
       } else {
-        User.create({
-          email,
-          name,
-          birth,
-          phone,
-          gender,
-          password,
-          bank,
-          bankNum,
-          agreementMust,
-          agreementChoice,
-          fcm_token
-        }).then(user_result => {
-          console.log(user_result.id);
-          let filename = `${user_result.id}_${profile.name}.png`;
-          const profileUrl =
-            "images/profiles/" +
-            (new Date().getMonth() + 1) +
-            "/" +
-            new Date().getDate() +
-            "/" +
-            filename;
-          // aws update
-          const S3 = new AWS.S3();
-          let param = {
-            Bucket: "deliverer.app",
-            Key: profileUrl,
-            ACL: "public-read",
-            Body: profile.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
-            ContentType: "image/png" // MIME 타입
-          };
-          S3.upload(param, (err, data) => {
-            if (err)
-              res.json({
-                code: 999,
-                result: false,
-                message: err
-              });
-          });
-          ///////////////////////////////////////////
-          User.update(
-            { profile: profileUrl, updatedAt: new Date() },
-            { where: { id: user_result.id } }
-          ).then(updateResult => {
-            // console.log(result);
-            if (updateResult) {
-              User.findOne({ where: { id: user_result.id } }).then(result => {
-                const token = jwt.sign(
-                  { user: result },
-                  jwt_config.jwt_config.secret,
-                  { expiresIn: "30 days" }
-                );
-                // console.log(token);
+        User.findOne({ where: { email: email } }).then(
+          user_email_check_result => {
+            if (user_email_check_result) {
+              if (user_email_check_result.status == "A") {
                 res.json({
-                  code: 200,
-                  user: result,
-                  token
+                  code: 400,
+                  msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
+                });
+              }
+              if (user_email_check_result.status == "D") {
+                res.json({
+                  code: 400,
+                  msg: "이미 사용중인 전화번호입니다 로그인 해 주세요"
+                });
+              }
+              if (user_email_check_result.status == "F") {
+                res.json({
+                  code: 600,
+                  msg: "탈퇴한 회원 재가입시 문의 요망"
+                });
+              }
+              return;
+            } else {
+              User.create({
+                email,
+                name,
+                birth,
+                phone,
+                gender,
+                password,
+                bank,
+                bankNum,
+                agreementMust,
+                agreementChoice,
+                fcm_token
+              }).then(user_result => {
+                console.log(user_result.id);
+                let filename = `${user_result.id}_${profile.name}.png`;
+                const profileUrl =
+                  "images/profiles/" +
+                  (new Date().getMonth() + 1) +
+                  "/" +
+                  new Date().getDate() +
+                  "/" +
+                  filename;
+                // aws update
+                const S3 = new AWS.S3();
+                let param = {
+                  Bucket: "deliverer.app",
+                  Key: profileUrl,
+                  ACL: "public-read",
+                  Body: profile.data, // 저장되는 데이터. String, Buffer, Stream 이 올 수 있다
+                  ContentType: "image/png" // MIME 타입
+                };
+                S3.upload(param, (err, data) => {
+                  if (err)
+                    res.json({
+                      code: 999,
+                      result: false,
+                      message: err
+                    });
+                });
+                ///////////////////////////////////////////
+                User.update(
+                  { profile: profileUrl, updatedAt: new Date() },
+                  { where: { id: user_result.id } }
+                ).then(updateResult => {
+                  // console.log(result);
+                  if (updateResult) {
+                    User.findOne({ where: { id: user_result.id } }).then(
+                      result => {
+                        const token = jwt.sign(
+                          { user: result },
+                          jwt_config.jwt_config.secret,
+                          { expiresIn: "30 days" }
+                        );
+                        // console.log(token);
+                        res.json({
+                          code: 200,
+                          user: result,
+                          token
+                        });
+                      }
+                    );
+                  } else {
+                    res.json({
+                      code: 999,
+                      msg: "시스템 오류"
+                    });
+                  }
                 });
               });
-            } else {
-              res.json({
-                code: 999,
-                msg: "시스템 오류"
-              });
             }
-          });
-        });
+          }
+        );
       }
     });
   }
 });
 
 // 오픈 뱅킹 플랫폼 callback url
-router.post("/openbanking", (req, res) => {});
+router.get("/openbanking", (req, res) => {
+  // console.log(req.body);
+});
+router.post("/openbanking", (req, res) => {
+  console.log(req.body);
+});
 
 module.exports = router;
