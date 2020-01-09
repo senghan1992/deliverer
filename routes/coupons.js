@@ -30,7 +30,9 @@ router.post("/", check.loginCheck, (req, res) => {
           //없을 경우
           db.CouponUsage.create({
             coupon_code: req.body.coupon_code,
-            user_id: req.user.id
+            user_id: req.user.id,
+            createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           }).then(create_coupon_usage_result => {
             db.CouponUsage.findOne({
               where: { id: create_coupon_usage_result.id },

@@ -1,3 +1,4 @@
+const moment = require("moment");
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define("review", {
     // order num
@@ -32,25 +33,5 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: "준 점수"
     },
-
-    createdAt: {
-      type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      //note here this is the guy that you are looking for
-      // get() {
-      //   return moment(this.getDataValue("createdAt")).format(
-      //     "llll"
-      //   );
-      // }
-    },
-    updatedAt: {
-      type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      // get() {
-      //   return moment(this.getDataValue("updatedAt")).format(
-      //     "llll"
-      //   );
-      // }
-    }
   });
 };

@@ -152,6 +152,6 @@ module.exports = (sequelize, DataTypes) => {
     //   // get() {
     //   //     return moment(this.getDataValue('updatedAt')).format('YYYY/MM/DD');
     //   // }
-    // }
+    // } 
   });
 };

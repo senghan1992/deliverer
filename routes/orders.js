@@ -45,7 +45,9 @@ router.post("/review", (req, res) => {
     writer_id: requestUserId,
     user_id: delivererId,
     comment: comment,
-    score: score
+    score: score,
+    createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+    updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
   })
     .then(reviewResult => {
       // console.log(reviewResult);
@@ -54,7 +56,7 @@ router.post("/review", (req, res) => {
           {
             star: db.sequelize.literal(`star + ${score}`),
             star_total: db.sequelize.literal(`star_total + 1`),
-            updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
           { where: { id: delivererId } }
         )
@@ -64,7 +66,7 @@ router.post("/review", (req, res) => {
               db.Order.update(
                 {
                   delivererReview: "T",
-                  updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+                  updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
                 },
                 { where: { id: orderId } }
               )
@@ -426,12 +428,14 @@ router.post("/", (req, res) => {
     status: status,
     price: price,
     cardName: cardName,
-    coupon: coupon
+    coupon: coupon,
+    createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+    // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
   }).then(data => {
     // coupon usage 바꿔주기
     if (data) {
       db.CouponUsage.update(
-        { is_used: 1, updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP") },
+        { is_used: 1, updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
         { where: { id: coupon } }
       ).then(coupon_result => {
         // console.log(data);
@@ -462,32 +466,67 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
   if (kind == "A") {
     let input_order = await Order.findOne({ where: { id: params_id } });
     if (input_order.status == "A") {
-      Order.update(
-        {
-          status: "F",
-          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
-        },
-        {
-          where: {
-            id: params_id
+      // 취소 추가
+      let cancel_create_result = await db.Cancel.create({
+        orderId: input_order.id,
+        order_status: input_order.status,
+        userId: req.user.id,
+        createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+      }).catch(err => {
+        res.json({
+          code: -1,
+          result: false
+        });
+      });
+
+      // order 상태값 바꿔주기
+      let data = await db.Order.update(
+        { status: "F", updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
+        { where: { id: params_id } }
+      ).catch(err => {
+        console.log(err);
+        res.json({
+          code: -1,
+          result: false
+        });
+      });
+
+      // panalty 여부 판단
+      let cancel_find_result = await db.Cancel.findAll({
+        attributes: [[db.sequelize.fn("count", "*"), "counts"]],
+        where: {
+          userId: req.user.id,
+          createdAt: {
+            [Op.gte]: moment()
+              .subtract(7, "days")
+              .toDate()
           }
         }
-      )
-        .then(data => {
-          // console.log(data);
-          res.json({
-            code: 200,
-            result: true,
-            data
-          });
-        })
-        .catch(err => {
-          console.log(err);
-          res.json({
-            code: -1,
-            result: false
-          });
+      }).catch(err => {
+        console.log(err);
+        res.json({
+          code: -1,
+          result: false
         });
+      });
+
+      // console.log(cancel_find_result[0].dataValues.counts);
+
+      // 패널티 대상자들
+      if (cancel_find_result[0].dataValues.counts > 5) {
+        await db.User.update(
+          {
+            prohibitTime: moment().format("YYYY-MM-DD HH:mm:ss"),
+            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+          },
+          { where: { id: req.user.id } }
+        );
+      }
+
+      res.json({
+        code: 200
+      });
     } else {
       res.json({
         code: 503,
@@ -552,83 +591,131 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
       cancel_result.raw.code == 0 &&
       cancel_result.raw.response.status == "cancelled"
     ) {
-      // 취소 로그 남기기
-      let customer_payment_result = await db.CustomerPayment.update(
-        {
-          is_canceled: true,
-          cancel_amount: cancel_price,
-          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
-        },
-        { where: { merchant_id: input_order.merchant_uid } }
-      );
-
-      // 쿠폰 사용했으면 쿠폰 사용 돌려놓기
-      if (input_order.coupon != "") {
-        await db.CouponUsage.update(
+        // 취소 추가
+        let cancel_create_result = await db.Cancel.create({
+          orderId: input_order.id,
+          order_status: input_order.status,
+          userId: req.user.id,
+          createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+        }).catch(err => {
+          res.json({
+            code: -1,
+            result: false
+          });
+        });
+        // 취소 로그 남기기
+        let customer_payment_result = await db.CustomerPayment.update(
           {
-            is_used: false,
-            updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+            is_canceled: true,
+            cancel_amount: cancel_price,
+            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
-          { where: { id: input_order.coupon } }
+          { where: { merchant_id: input_order.merchant_uid } }
         );
-      }
 
-      // deliver 상태값 바꾸기
-      let deliver_update_result = await db.Deliver.update(
-        {
-          status: "F",
-          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
-        },
-        { where: { id: input_order.deliver.id } }
-      );
-
-      // order 상태값 바꾸기
-      let order_update_result = await db.Order.update(
-        { status: "F", updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP") },
-        { where: { id: input_order.id } }
-      );
-
-      // deliverer push 알림
-      let message = {
-        to: input_order.deliver.deliverUser.fcm_token,
-        notification: {
-          title: "운송 취소",
-          body: "발송자가 운송을 취소하였습니다."
-        },
-        data: {
-          title: "cancel_request_user",
-          body: "999",
-          click_action: "FLUTTER_NOTIFICATION_CLICK"
+        // 쿠폰 사용했으면 쿠폰 사용 돌려놓기
+        if (input_order.coupon != "") {
+          await db.CouponUsage.update(
+            {
+              is_used: false,
+              updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+            },
+            { where: { id: input_order.coupon } }
+          );
         }
-      };
 
-      fcm.send(message, (err, response) => {
-        if (err) {
-          if (err) {
-            console.log(err);
-            res.json({
-              code: -1,
-              err
-            });
+        // deliver 상태값 바꾸기
+        let deliver_update_result = await db.Deliver.update(
+          {
+            status: "F",
+            updatedAt : moment().format("YYYY-MM-DD HH:mm:ss")
+          },
+          { where: { id: input_order.deliver.id } }
+        );
+
+        // order 상태값 바꾸기
+        let order_update_result = await db.Order.update(
+          {
+            status: "F",
+            updatedAt : moment().format("YYYY-MM-DD HH:mm:ss")
+          },
+          { where: { id: input_order.id } }
+        );
+        
+        // panalty 여부 판단
+        let cancel_find_result = await db.Cancel.findAll({
+          attributes: [[db.sequelize.fn("count", "*"), "counts"]],
+          where: {
+            userId: req.user.id,
+            createdAt: {
+              [Op.gte]: moment()
+                .subtract(7, "days")
+                .toDate()
+            }
           }
-        } else console.log("Successfully sent with response : ", response);
-      });
+        }).catch(err => {
+          console.log(err);
+          res.json({
+            code: -1,
+            result: false
+          });
+        });
 
-      if (
-        order_update_result &&
-        customer_payment_result &&
-        deliver_update_result
-      ) {
-        res.json({
-          code: 200
+        // console.log(cancel_find_result[0].dataValues.counts);
+
+        // 패널티 대상자들
+        if (cancel_find_result[0].dataValues.counts > 5) {
+          await db.User.update(
+            {
+              prohibitTime: moment().format("YYYY-MM-DD HH:mm:ss"),
+              updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+            },
+            { where: { id: req.user.id } }
+          );
+        }
+
+        // deliverer push 알림
+        let message = {
+          to: input_order.deliver.deliverUser.fcm_token,
+          notification: {
+            title: "운송 취소",
+            body: "발송자가 운송을 취소하였습니다."
+          },
+          data: {
+            title: "cancel_request_user",
+            body: "999",
+            click_action: "FLUTTER_NOTIFICATION_CLICK"
+          }
+        };
+
+        fcm.send(message, (err, response) => {
+          if (err) {
+            if (err) {
+              console.log(err);
+              res.json({
+                code: -1,
+                err
+              });
+            }
+          } else console.log("Successfully sent with response : ", response);
         });
+
+        if (
+          order_update_result &&
+          customer_payment_result &&
+          deliver_update_result
+        ) {
+          res.json({
+            code: 200
+          });
+        } else {
+          res.json({
+            code: 999,
+            msg: "업데이트중 오류가 발생하였습니다 다시 시도해주세요"
+          });
+        }
       } else {
-        res.json({
-          code: 999,
-          msg: "업데이트중 오류가 발생하였습니다 다시 시도해주세요"
-        });
-      }
-    } else {
       // 승인 취소 오류시
       res.json({
         code: 999,

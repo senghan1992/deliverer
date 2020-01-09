@@ -88,20 +88,9 @@ module.exports = (sequelize, DataTypes) => {
       comment: "유저 상태값 A : 활성 / D : 휴면 / F : 탈퇴",
       defaultValue: "A"
     },
-    createdAt: {
+    prohibitTime: {
       type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      //note here this is the guy that you are looking for
-      // get() {
-      //   return moment(this.getDataValue("createdAt")).format("YYYY/MM/DD");
-      // }
+      comment: "패널티 적용 시작 시간"
     },
-    updatedAt: {
-      type: "TIMESTAMP",
-      defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
-      // get() {
-      //   return moment(this.getDataValue("updatedAt")).format("YYYY/MM/DD");
-      // }
-    }
   });
 };

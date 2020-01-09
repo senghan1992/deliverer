@@ -1,3 +1,4 @@
+const moment = require("moment");
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define("coupon", {
     // 쿠폰 코드
@@ -38,6 +39,6 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0,
       comment: "할인 정도"
-    }
+    },
   });
 };

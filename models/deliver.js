@@ -42,10 +42,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM("T", "F"),
       allowNull: true,
       defaultValue: "F",
-      comment : '발송자 리뷰'
+      comment: "발송자 리뷰"
     },
     status: {
-      type: DataTypes.ENUM("A", "B", "C", "D","F"),
+      type: DataTypes.ENUM("A", "B", "C", "D", "F"),
       allowNull: true,
       comment: "운송 상태값"
     },

@@ -12,6 +12,8 @@ const iamport_config = require("../config/iamport_config");
 // 로그인 체크
 const check = require("../middleware/login_check");
 
+const moment = require("moment");
+
 // 결제 수단 삭제
 router.delete("/:customer_uid", check.loginCheck ,async (req, res) => {
   const iamporter = new Iamporter({
@@ -96,7 +98,9 @@ router.post("/", check.loginCheck, async (req, res) => {
       userId: req.user.id,
       customer_uid: result.data.customer_uid,
       card_name: result.data.card_name,
-      card_number: result.data.card_number
+      card_number: result.data.card_number,
+      createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+      updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
     })
       .then(paymentResult => {
         // console.log(paymentResult);
@@ -118,6 +122,11 @@ router.post("/", check.loginCheck, async (req, res) => {
 
   // 빌링키 발급
   // 성공시 서버에 customer_uid 저장
+});
+
+// 입금 이체 call back
+router.post('/transit', (req,res) => {
+
 });
 
 module.exports = router;

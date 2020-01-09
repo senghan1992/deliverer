@@ -31,6 +31,7 @@ AWS.config.update({
 const { Iamporter, IamporterError } = require("iamporter");
 const iamport_config = require("../config/iamport_config");
 const axios = require("axios").default;
+const moment = require("moment");
 
 // 본인인증 callback
 router.post("/certificate", async (req, res) => {
@@ -134,7 +135,10 @@ router.put("/:id", check.loginCheck, async (req, res) => {
         });
     });
 
-    db.User.update({ profile: imageUrl }, { where: { id: userId } })
+    db.User.update(
+      { profile: imageUrl, updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
+      { where: { id: userId } }
+    )
       .then(result => {
         console.log(result);
         res.json({
@@ -149,7 +153,10 @@ router.put("/:id", check.loginCheck, async (req, res) => {
         });
       });
   } else if (kind == "normal") {
-    db.User.update({ profile: null }, { where: { id: userId } })
+    db.User.update(
+      { profile: null, updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
+      { where: { id: userId } }
+    )
       .then(result => {
         res.json({
           code: 200,
@@ -163,7 +170,10 @@ router.put("/:id", check.loginCheck, async (req, res) => {
         });
       });
   } else if (kind == "drop") {
-    db.User.update({ status: "F" }, { where: { id: userId } })
+    db.User.update(
+      { status: "F", updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
+      { where: { id: userId } }
+    )
       .then(result => {
         res.json({
           code: 200,
@@ -263,7 +273,11 @@ router.put("/account/:id", check.loginCheck, async (req, res) => {
     let bank_holder = vbanksResult.data.response.bank_holder;
     if (bank_holder == req.user.name) {
       User.update(
-        { bank: bank_code, bankNum: bank_num },
+        {
+          bank: bank_code,
+          bankNum: bank_num,
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+        },
         { where: { id: req.user.id } }
       ).then(result => {
         res.json({
@@ -286,7 +300,7 @@ router.put("/account/:id", check.loginCheck, async (req, res) => {
 // user 정보 가지고 오기 (발송 건수, 운송 건수, 기본 정보)
 router.get("/", check.loginCheck, async (req, res) => {
   await db.User.update(
-    { updatedAt: db.sequelize.fn("NOW") },
+    { updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
     { where: { id: req.user.id } }
   );
   db.User.findOne({ where: { id: req.user.id } })
@@ -319,7 +333,13 @@ router.get("/", check.loginCheck, async (req, res) => {
                     order_result: order_result[0]["count"],
                     deliver_result: deliver_result[0]["count"],
                     payment_result,
-                    coupon_result
+                    coupon_result,
+                    popUp: {
+                      isTrue: false,
+                      title: "test",
+                      content: "test_content",
+                      image: "imageurl"
+                    }
                   });
                 });
               });
@@ -362,7 +382,7 @@ router.post("/login", (req, res) => {
             );
             db.User.update(
               {
-                updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP"),
+                updatedAt: moment().format("YYYY-MM-DD HH:mm:ss"),
                 fcm_token: req.body.token
               },
               { where: { id: user_result.id } }
@@ -472,7 +492,9 @@ router.post("/regist", (req, res) => {
                 bankNum,
                 agreementMust,
                 agreementChoice,
-                fcm_token
+                fcm_token,
+                createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+                updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
               }).then(result => {
                 if (result) {
                   // 유저 생성 성공하면 jwt token 발행해서 return 해준다
@@ -561,7 +583,9 @@ router.post("/regist", (req, res) => {
                 bankNum,
                 agreementMust,
                 agreementChoice,
-                fcm_token
+                fcm_token,
+                createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+                updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
               }).then(user_result => {
                 console.log(user_result.id);
                 let filename = `${user_result.id}_${profile.name}.png`;
@@ -591,7 +615,10 @@ router.post("/regist", (req, res) => {
                 });
                 ///////////////////////////////////////////
                 User.update(
-                  { profile: profileUrl, updatedAt: new Date() },
+                  {
+                    profile: profileUrl,
+                    updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+                  },
                   { where: { id: user_result.id } }
                 ).then(updateResult => {
                   // console.log(result);

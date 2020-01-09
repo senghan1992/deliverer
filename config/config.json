@@ -15,8 +15,11 @@
     "define": {
       "charset": "utf8",
       "collate": "utf8_general_ci",
-      "timestamps": true
-    }
+      "timestamps": true,
+      "timezone": "+09:00"
+    },
+    "logging": false,
+    "timezone": "+09:00"
   },
   "production": {
     "username": "root",

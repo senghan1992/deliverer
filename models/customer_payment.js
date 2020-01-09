@@ -1,3 +1,4 @@
+const moment = require("moment");
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define("customer_payment", {
     user_id: {
@@ -31,6 +32,6 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: "취소된 금액",
       defaultValue: 0
-    }
+    },
   });
 };

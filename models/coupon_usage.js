@@ -1,3 +1,4 @@
+const moment = require("moment");
 module.exports = (sequelize, DataTypes) => {
   return sequelize.define("coupon_usage", {
     // coupon code
@@ -18,6 +19,6 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: false,
       comment: "사용여부"
-    }
+    },
   });
 };

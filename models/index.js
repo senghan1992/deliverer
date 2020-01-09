@@ -23,7 +23,7 @@ sequelize = new Sequelize(
     host: config.host,
     dialect: "mysql",
     logging: false,
-    operatorsAliases: Op
+    operatorsAliases: Op,
   }
 );
 
@@ -54,6 +54,7 @@ db.Payment = require("./payment")(sequelize, Sequelize);
 db.Coupon = require("./coupon")(sequelize, Sequelize);
 db.CouponUsage = require("./coupon_usage")(sequelize, Sequelize);
 db.CustomerPayment = require("./customer_payment")(sequelize, Sequelize);
+db.Cancel = require("./cancel")(sequelize, Sequelize);
 
 db.Order.belongsTo(db.User, { foreignKey: "requestId", constraints: false });
 db.Order.hasOne(db.Deliver);
@@ -88,9 +89,20 @@ db.Review.belongsTo(db.User, {
 
 db.User.hasMany(db.Payment, { foreignKey: "userId", sourceKey: "id" });
 
+//쿠폰 사용 항목
 db.CouponUsage.belongsTo(db.Coupon, {
   foreignKey: "coupon_code",
   sourceKey: "coupon_code"
+});
+
+// 취소항목
+db.Cancel.belongsTo(db.Order, {
+  foreignKey: "orderId",
+  constraints: false
+});
+db.Cancel.belongsTo(db.User, {
+  foreignKey: "userId",
+  constraints: false
 });
 
 // db.Order.hasOne(db.Deliver);

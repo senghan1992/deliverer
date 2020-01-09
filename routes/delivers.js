@@ -51,7 +51,9 @@ router.post("/review", (req, res) => {
     writer_id: delivererId,
     user_id: requestUserId,
     comment: comment,
-    score: score
+    score: score,
+    createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+    updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
   })
     .then(reviewResult => {
       // console.log(reviewResult);
@@ -59,7 +61,8 @@ router.post("/review", (req, res) => {
         db.User.update(
           {
             star: db.sequelize.literal(`star + ${score}`),
-            star_total: db.sequelize.literal(`star_total + 1`)
+            star_total: db.sequelize.literal(`star_total + 1`),
+            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
           { where: { id: requestUserId } }
         )
@@ -67,7 +70,10 @@ router.post("/review", (req, res) => {
             // console.log(userStarResult);
             if (userStarResult) {
               db.Deliver.update(
-                { orderUserReview: "T" },
+                {
+                  orderUserReview: "T",
+                  updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+                },
                 { where: { id: deliverId } }
               )
                 .then(deliverResult => {
@@ -148,14 +154,15 @@ router.put("/:id", async (req, res) => {
       {
         pickUpImage: imageUrl,
         status: "B",
-        pickUpTime: db.sequelize.fn("NOW")
+        pickUpTime: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
       },
       { where: { id: deliverId } }
     )
       .then(updateDeliver => {
         // order status update
         db.Order.update(
-          { status: "C", updatedAt: db.sequelize.fn("NOW") },
+          { status: "C", updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
           { where: { id: orderId } }
         )
           .then(updateOrder => {
@@ -234,7 +241,7 @@ router.put("/:id", async (req, res) => {
       .then(updateDeliver => {
         // order status update
         db.Order.update(
-          { status: "D", updatedAt: db.sequelize.fn("NOW") },
+          { status: "D", updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
           { where: { id: orderId } }
         )
           .then(updateOrder => {
@@ -297,15 +304,22 @@ router.put("/:id", async (req, res) => {
     }).then(result => {
       console.log(result);
       // deliver status 값 => D
-      db.Deliver.update({ status: "D" }, { where: { id: deliverId } })
+      db.Deliver.update(
+        { status: "D", updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
+        { where: { id: deliverId } }
+      )
         .then(deliverResult => {
           // order status 값 => E
-          db.Order.update({ status: "E" }, { where: { id: orderId } })
+          db.Order.update(
+            { status: "E", updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
+            { where: { id: orderId } }
+          )
             .then(orderResult => {
               // 딜리버러 수익금 올려주기
               db.User.update(
                 {
-                  price: db.sequelize.literal(`price + ${orderPrice}`)
+                  price: db.sequelize.literal(`price + ${orderPrice * 0.866}`),
+                  updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
                 },
                 { where: { id: delivererId } }
               )
@@ -485,7 +499,9 @@ router.post("/", check.loginCheck, (req, res) => {
           user_id: req.user.id,
           order_id: orderId,
           merchant_id: bill_result.raw.response.merchant_uid,
-          amount: bill_result.raw.response.amount
+          amount: bill_result.raw.response.amount,
+          createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
         }).then(customer_payment => {
           if (customer_payment) {
             // console.log(customer_payment);
@@ -494,11 +510,17 @@ router.post("/", check.loginCheck, (req, res) => {
               delivererId: delivererId,
               requestId: requestId,
               orderId: orderId,
-              status: "A"
+              status: "A",
+              createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+              updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
             }).then(deliver => {
               // console.log(deliver);
               db.Order.update(
-                { status: "B", merchant_uid: merchant_uid },
+                {
+                  status: "B",
+                  merchant_uid: merchant_uid,
+                  updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+                },
                 { where: { id: orderId } }
               )
                 .then(data => {
@@ -581,6 +603,7 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
       include: [{ model: db.Order, include: [{ model: db.User }] }]
     });
 
+    // 승인 취소
     const cancel_result = await iamporter
       .cancelByMerchantUid(deliver_result.order.merchant_uid)
       .catch(err => {
@@ -590,16 +613,31 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
         });
       });
 
+    // 승인 취소가 잘 됐을 경우만
     if (
       cancel_result.status == 200 &&
       cancel_result.raw.code == 0 &&
       cancel_result.raw.response.status == "cancelled"
     ) {
+      // 취소 추가
+      let cancel_create_result = await db.Cancel.create({
+        orderId: deliver_result.order.id,
+        order_status: deliver_result.order.status,
+        userId: req.user.id,
+        createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+      }).catch(err => {
+        res.json({
+          code: -1,
+          result: false
+        });
+      });
+      // 승인 취소 로그 남기기
       const customer_payment_result = await db.CustomerPayment.update(
         {
           is_canceled: true,
           cancel_amount: deliver_result.order.price,
-          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
         },
         { where: { merchant_id: deliver_result.order.merchant_uid } }
       ).catch(err => {
@@ -614,7 +652,7 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
         await db.CouponUsage.update(
           {
             is_used: false,
-            updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
           { where: { id: deliver_result.order.coupon } }
         );
@@ -624,7 +662,7 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
       const order_update_result = await db.Order.update(
         {
           status: "A",
-          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
         },
         { where: { id: deliver_result.order.id } }
       ).catch(err => {
@@ -638,7 +676,7 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
       const deliver_update_result = await db.Deliver.update(
         {
           status: "F",
-          updatedAt: db.sequelize.literal("CURRENT_TIMESTAMP")
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
         },
         { where: { id: deliver_result.id } }
       ).catch(err => {
@@ -647,6 +685,38 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
           msg: "데이터 업데이트 중 오류가 발생하였습니다"
         });
       });
+
+      // panalty 여부 판단
+      let cancel_find_result = await db.Cancel.findAll({
+        attributes: [[db.sequelize.fn("count", "*"), "counts"]],
+        where: {
+          userId: req.user.id,
+          createdAt: {
+            [Op.gte]: moment()
+              .subtract(7, "days")
+              .toDate()
+          }
+        }
+      }).catch(err => {
+        console.log(err);
+        res.json({
+          code: -1,
+          result: false
+        });
+      });
+
+      // console.log(cancel_find_result[0].dataValues.counts);
+
+      // 패널티 대상자들
+      if (cancel_find_result[0].dataValues.counts > 5) {
+        await db.User.update(
+          {
+            prohibitTime: moment().format("YYYY-MM-DD HH:mm:ss"),
+            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+          },
+          { where: { id: req.user.id } }
+        );
+      }
 
       // request user push notification
       let message = {
