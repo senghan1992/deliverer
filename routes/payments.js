@@ -11,11 +11,76 @@ const iamport_config = require("../config/iamport_config");
 
 // 로그인 체크
 const check = require("../middleware/login_check");
-
+// moment
 const moment = require("moment");
+// axios
+const axios = require("axios");
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// 환전
+router.post("/exchange", check.loginCheck, async (req, res) => {
+  let user = await db.User.findOne({ where: { id: req.user.id } });
+  // console.log(req.user);
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // 오픈뱅킹 access token 먼저 받아오기
+  const openbanking_url = "https://testapi.openbanking.or.kr";
+  const openbanking_getToken = await axios({
+    url: `${openbanking_url}/oauth/2.0/token`,
+    method: "post",
+    headers: { "Content-Type": "application/json" },
+    data: {
+      client_id: "neBtXqFVn3YYow1v9Uu6uVBAHbzYpZQQ7gSel4pq",
+      client_secret: "xglaVyNkU8wD7YKXPpOCPlqGZVE7vqJNAfkwc3j7",
+      grant_type: "client_credentials",
+      scope: "oob"
+    }
+  }).catch(err => {
+    console.log(err);
+  });
+  const openbanking_access_token = openbanking_getToken;
+  console.log(openbanking_access_token);
+  return;
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  // 오픈 뱅킹 입금 이체 api
+  // const openbanking_transit = await axios.post(
+  //   `${openbanking_url}/v2.0/transfer/deposit/acnt_num`,
+  //   {
+  //     cntr_account_type: "N", // 약정, 계좌/계정 구분 N:계좌, C:계정
+  //     cntr_account_num: "5202118792", // 약정 계좌/계정 번호
+  //     wd_pass_phrase: "NONE", // 입금이체용 암호문구 -> 계약시 적용
+  //     wd_print_content: "딜리버러 환전", // 출금계좌인자내역
+  //     name_check_option: "on", // 수취인 성명검증 여부
+  //     tran_dtime: `${moment().format("YYYYMMDDHHmmss")}`, // 요청 일시
+  //     req_cnt: "1", // 입금요청건수
+  //     req_list: [
+  //       // 입금요청 목록 -> 우리의 경우 한사람이 자기한테 이체하므로 그런거 없다
+  //       {
+  //         tran_no: "1", //거래순번
+  //         bank_tran_id: `T991600430U${user.id}D${moment().format("HHmmss")}D`, // 은행거래고유번호
+  //         bank_code_std: user.bank, // 입금은행 표준코드
+  //         account_num: user.bankNum, // 계좌번호
+  //         account_holder_name: user.name, // 입금계좌예금주명
+  //         print_content: "딜리버러 환전", // 입금계좌인자내역
+  //         tran_amt: "10000", // 환전 요청 들어온 금액
+  //         req_client_name: user.name, //요청고객성명
+  //         req_client_bank_code: user.bank, // 요청고객계좌 개설기관 표준코드
+  //         req_client_account_num: user.bankNum, // 요청고객회원번호
+  //         req_client_num: `deliverer_${user.id}`, // 요청고객회원번호
+  //         transfer_purpose: "TR"
+  //       }
+  //     ]
+  //   }
+  // );
+  // console.log(openbanking_transit);
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+});
 
 // 결제 수단 삭제
-router.delete("/:customer_uid", check.loginCheck ,async (req, res) => {
+router.delete("/:customer_uid", check.loginCheck, async (req, res) => {
   const iamporter = new Iamporter({
     apiKey: iamport_config.iamport_config.apiKey,
     secret: iamport_config.iamport_config.apiSecretKey
@@ -30,7 +95,7 @@ router.delete("/:customer_uid", check.loginCheck ,async (req, res) => {
     });
 
   console.log(result);
-  
+
   // 내 DB에서도 삭제
   db.Payment.destroy({
     where: { customer_uid: req.params.customer_uid }
@@ -125,8 +190,6 @@ router.post("/", check.loginCheck, async (req, res) => {
 });
 
 // 입금 이체 call back
-router.post('/transit', (req,res) => {
-
-});
+router.post("/transit", (req, res) => {});
 
 module.exports = router;

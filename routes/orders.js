@@ -55,8 +55,8 @@ router.post("/review", (req, res) => {
         db.User.update(
           {
             star: db.sequelize.literal(`star + ${score}`),
-            star_total: db.sequelize.literal(`star_total + 1`),
-            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+            star_total: db.sequelize.literal(`star_total + 1`)
+            // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
           { where: { id: delivererId } }
         )
@@ -65,8 +65,8 @@ router.post("/review", (req, res) => {
             if (userStarResult) {
               db.Order.update(
                 {
-                  delivererReview: "T",
-                  updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+                  delivererReview: "T"
+                  // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
                 },
                 { where: { id: orderId } }
               )
@@ -202,6 +202,15 @@ router.get("/history/finish/:id", (req, res) => {
           { model: db.User, as: "deliverUser" },
           { model: db.User, as: "requestUser" }
         ]
+      },
+      {
+        required: false,
+        model: db.CouponUsage,
+        include: [{ model: db.Coupon }]
+      },
+      {
+        required: false,
+        model: db.Payment
       }
     ]
   }).then(result => {
@@ -217,69 +226,98 @@ router.get("/", check.loginCheck, (req, res) => {
   console.log("일단 여기는 들어온다");
   // console.log(req.params.id);
   // return;
-  let requestId = req.user.id;
 
-  let deliverPickLatitude = req.query.deliverPickLatitude; //req.body.deliverPickLatitude;
-  let deliverPickLongitude = req.query.deliverPickLongitude; //req.body.deliverPickLongitude;
+  let kind = req.query.kind;
+  // console.log(req.params);
 
-  let deliverDestLatitude = req.query.deliverDestLatitude; //req.body.deliverPickLatitude;
-  let deliverDestLongitude = req.query.deliverDestLongitude; //req.body.deliverPickLongitude;
+  if (kind == 0) {
+    let requestId = req.user.id;
 
-  let distanceLimit = 20;
+    let deliverPickLatitude = req.query.deliverPickLatitude; //req.body.deliverPickLatitude;
+    let deliverPickLongitude = req.query.deliverPickLongitude; //req.body.deliverPickLongitude;
 
-  let filtering;
-  let filterString = req.query.filter;
-  if (filterString == "픽업거리순") {
-    filtering = "pickdistance desc";
+    let deliverDestLatitude = req.query.deliverDestLatitude; //req.body.deliverPickLatitude;
+    let deliverDestLongitude = req.query.deliverDestLongitude; //req.body.deliverPickLongitude;
+
+    let userLatitude = req.query.userLatitude;
+    let userLongitude = req.query.userLongitude;
+
+    let distanceLimit = 20;
+
+    let filtering;
+    let filterString = req.query.filter;
+    if (filterString == "픽업거리순") {
+      filtering = "pickdistance desc";
+    } else {
+      filtering = "price desc";
+    }
+    // return;
+
+    // console.log('ㅇㅕ기는 오나?');
+
+    db.sequelize
+      .query(
+        `SELECT * , (6371*acos(cos(radians(${deliverPickLatitude}))*cos(radians(pickLatitude))*cos(radians(pickLongitude)-radians(${deliverPickLongitude}))+sin(radians(${deliverPickLatitude}))*sin(radians(pickLatitude)))) AS pickDistance, (6371*acos(cos(radians(${deliverDestLatitude}))*cos(radians(destLatitude))*cos(radians(destLongitude)-radians(${deliverDestLongitude}))+sin(radians(${deliverDestLatitude}))*sin(radians(destLatitude)))) AS destDistance, (6371*acos(cos(radians(${userLatitude}))*cos(radians(pickLatitude))*cos(radians(pickLongitude)-radians(${userLongitude}))+sin(radians(${userLatitude}))*sin(radians(pickLatitude)))) AS distanceFromMe, (6371*acos(cos(radians(pickLatitude))*cos(radians(destLatitude))*cos(radians(destLongitude)-radians(pickLongitude))+sin(radians(pickLatitude))*sin(radians(destLatitude)))) AS distance FROM orders WHERE status = 'A' AND requestId != ${req.user.id} HAVING pickDistance <= ${distanceLimit} AND destDistance <= ${distanceLimit} order by ${filtering}`,
+        {
+          replacements: ["active"],
+          type: db.sequelize.QueryTypes.SELECT
+        }
+      )
+      .then(data => {
+        // console.log(data);
+        res.json({
+          code: 200,
+          result: true,
+          data
+        });
+      })
+      .catch(error => {
+        console.log(error);
+        res.json({
+          code: 999,
+          error
+        });
+      });
   } else {
-    filtering = "price desc";
+    // 내 위치 기반 요청 목록 불러오기
+    let userLatitude = req.query.userLatitude;
+    let userLongitude = req.query.userLongitude;
+    let limitRadius = 20;
+    let filtering;
+    let filterString = req.query.filter;
+    if (filterString == "픽업거리순") {
+      filtering = "distanceFromMe desc";
+    } else {
+      filtering = "price desc";
+    }
+    console.log(`userLatitude >>> ${userLatitude}`);
+    console.log(`userLongitude >>> ${userLongitude}`);
+
+    // query
+    db.sequelize
+      .query(
+        `SELECT * , (6371*acos(cos(radians(${userLatitude}))*cos(radians(pickLatitude))*cos(radians(pickLongitude)-radians(${userLongitude}))+sin(radians(${userLatitude}))*sin(radians(pickLatitude)))) AS distanceFromMe, (6371*acos(cos(radians(pickLatitude))*cos(radians(destLatitude))*cos(radians(destLongitude)-radians(pickLongitude))+sin(radians(pickLatitude))*sin(radians(destLatitude)))) AS distance FROM orders WHERE status = 'A' AND requestId != ${req.user.id} HAVING distanceFromMe <= ${limitRadius} order by ${filtering}`,
+        {
+          replacements: ["active"],
+          type: db.sequelize.QueryTypes.SELECT
+        }
+      )
+      .then(data => {
+        console.log(data);
+        res.json({
+          code: 200,
+          result: true,
+          data
+        });
+      })
+      .catch(error => {
+        console.log(error);
+        res.json({
+          code: 999,
+          error
+        });
+      });
   }
-  // return;
-
-  // console.log('ㅇㅕ기는 오나?');
-
-  db.sequelize
-    .query(
-      "SELECT *, (6371*acos(cos(radians(" +
-        deliverPickLatitude +
-        "))*cos(radians(pickLatitude))*cos(radians(pickLongitude)-radians(" +
-        deliverPickLongitude +
-        "))+sin(radians(" +
-        deliverPickLatitude +
-        "))*sin(radians(pickLatitude)))) AS pickdistance, (6371*acos(cos(radians(" +
-        deliverDestLatitude +
-        "))*cos(radians(destLatitude))*cos(radians(destLongitude)-radians(" +
-        deliverDestLongitude +
-        "))+sin(radians(" +
-        deliverDestLatitude +
-        "))*sin(radians(destLatitude)))) AS destdistance, (6371*acos(cos(radians(pickLatitude))*cos(radians(destLatitude))*cos(radians(destLongitude)-radians(pickLongitude))+sin(radians(pickLatitude))*sin(radians(destLatitude)))) AS distance FROM orders WHERE status = 'A' AND requestId != " +
-        requestId +
-        " HAVING pickdistance <= " +
-        distanceLimit +
-        " and destdistance <=" +
-        distanceLimit +
-        " ORDER BY " +
-        filtering,
-      {
-        replacements: ["active"],
-        type: db.sequelize.QueryTypes.SELECT
-      }
-    )
-    .then(data => {
-      // console.log(data);
-      res.json({
-        code: 200,
-        result: true,
-        data
-      });
-    })
-    .catch(error => {
-      console.log(error);
-      res.json({
-        code: 999,
-        error
-      });
-    });
 });
 
 // 요청 등록
@@ -311,6 +349,7 @@ router.post("/", (req, res) => {
   let comments = req.body.comments;
   let status = req.body.status;
   let price = req.body.price;
+  let cardId = req.body.cardId;
   let cardName = req.body.cardName;
   let coupon = req.body.coupon;
   let files = req.files["files[]"];
@@ -427,9 +466,10 @@ router.post("/", (req, res) => {
     comments: comments,
     status: status,
     price: price,
+    cardId: cardId,
     cardName: cardName,
     coupon: coupon,
-    createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+    createdAt: moment().format("YYYY-MM-DD HH:mm:ss")
     // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
   }).then(data => {
     // coupon usage 바꿔주기
@@ -493,36 +533,36 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
       });
 
       // panalty 여부 판단
-      let cancel_find_result = await db.Cancel.findAll({
-        attributes: [[db.sequelize.fn("count", "*"), "counts"]],
-        where: {
-          userId: req.user.id,
-          createdAt: {
-            [Op.gte]: moment()
-              .subtract(7, "days")
-              .toDate()
-          }
-        }
-      }).catch(err => {
-        console.log(err);
-        res.json({
-          code: -1,
-          result: false
-        });
-      });
+      // let cancel_find_result = await db.Cancel.findAll({
+      //   attributes: [[db.sequelize.fn("count", "*"), "counts"]],
+      //   where: {
+      //     userId: req.user.id,
+      //     createdAt: {
+      //       [Op.gte]: moment()
+      //         .subtract(7, "days")
+      //         .toDate()
+      //     }
+      //   }
+      // }).catch(err => {
+      //   console.log(err);
+      //   res.json({
+      //     code: -1,
+      //     result: false
+      //   });
+      // });
 
       // console.log(cancel_find_result[0].dataValues.counts);
 
       // 패널티 대상자들
-      if (cancel_find_result[0].dataValues.counts > 5) {
-        await db.User.update(
-          {
-            prohibitTime: moment().format("YYYY-MM-DD HH:mm:ss"),
-            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
-          },
-          { where: { id: req.user.id } }
-        );
-      }
+      // if (cancel_find_result[0].dataValues.counts > 5) {
+      //   await db.User.update(
+      //     {
+      //       prohibitTime: moment().format("YYYY-MM-DD HH:mm:ss"),
+      //       updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+      //     },
+      //     { where: { id: req.user.id } }
+      //   );
+      // }
 
       res.json({
         code: 200
@@ -591,131 +631,131 @@ router.delete("/:id", check.loginCheck, async (req, res) => {
       cancel_result.raw.code == 0 &&
       cancel_result.raw.response.status == "cancelled"
     ) {
-        // 취소 추가
-        let cancel_create_result = await db.Cancel.create({
-          orderId: input_order.id,
-          order_status: input_order.status,
-          userId: req.user.id,
-          createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
-          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
-        }).catch(err => {
-          res.json({
-            code: -1,
-            result: false
-          });
+      // 취소 추가
+      let cancel_create_result = await db.Cancel.create({
+        orderId: input_order.id,
+        order_status: input_order.status,
+        userId: req.user.id,
+        createdAt: moment().format("YYYY-MM-DD HH:mm:ss"),
+        updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+      }).catch(err => {
+        res.json({
+          code: -1,
+          result: false
         });
-        // 취소 로그 남기기
-        let customer_payment_result = await db.CustomerPayment.update(
+      });
+      // 취소 로그 남기기
+      let customer_payment_result = await db.CustomerPayment.update(
+        {
+          is_canceled: true,
+          cancel_amount: cancel_price,
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+        },
+        { where: { merchant_id: input_order.merchant_uid } }
+      );
+
+      // 쿠폰 사용했으면 쿠폰 사용 돌려놓기
+      if (input_order.coupon != "") {
+        await db.CouponUsage.update(
           {
-            is_canceled: true,
-            cancel_amount: cancel_price,
+            is_used: false,
             updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
-          { where: { merchant_id: input_order.merchant_uid } }
+          { where: { id: input_order.coupon } }
         );
+      }
 
-        // 쿠폰 사용했으면 쿠폰 사용 돌려놓기
-        if (input_order.coupon != "") {
-          await db.CouponUsage.update(
-            {
-              is_used: false,
-              updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
-            },
-            { where: { id: input_order.coupon } }
-          );
+      // deliver 상태값 바꾸기
+      let deliver_update_result = await db.Deliver.update(
+        {
+          status: "F",
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+        },
+        { where: { id: input_order.deliver.id } }
+      );
+
+      // order 상태값 바꾸기
+      let order_update_result = await db.Order.update(
+        {
+          status: "F",
+          updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+        },
+        { where: { id: input_order.id } }
+      );
+
+      // panalty 여부 판단
+      // let cancel_find_result = await db.Cancel.findAll({
+      //   attributes: [[db.sequelize.fn("count", "*"), "counts"]],
+      //   where: {
+      //     userId: req.user.id,
+      //     createdAt: {
+      //       [Op.gte]: moment()
+      //         .subtract(7, "days")
+      //         .toDate()
+      //     }
+      //   }
+      // }).catch(err => {
+      //   console.log(err);
+      //   res.json({
+      //     code: -1,
+      //     result: false
+      //   });
+      // });
+
+      // console.log(cancel_find_result[0].dataValues.counts);
+
+      // 패널티 대상자들
+      // if (cancel_find_result[0].dataValues.counts > 5) {
+      //   await db.User.update(
+      //     {
+      //       prohibitTime: moment().format("YYYY-MM-DD HH:mm:ss"),
+      //       updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+      //     },
+      //     { where: { id: req.user.id } }
+      //   );
+      // }
+
+      // deliverer push 알림
+      let message = {
+        to: input_order.deliver.deliverUser.fcm_token,
+        notification: {
+          title: "운송 취소",
+          body: "발송자가 운송을 취소하였습니다."
+        },
+        data: {
+          title: "cancel_request_user",
+          body: "999",
+          click_action: "FLUTTER_NOTIFICATION_CLICK"
         }
+      };
 
-        // deliver 상태값 바꾸기
-        let deliver_update_result = await db.Deliver.update(
-          {
-            status: "F",
-            updatedAt : moment().format("YYYY-MM-DD HH:mm:ss")
-          },
-          { where: { id: input_order.deliver.id } }
-        );
-
-        // order 상태값 바꾸기
-        let order_update_result = await db.Order.update(
-          {
-            status: "F",
-            updatedAt : moment().format("YYYY-MM-DD HH:mm:ss")
-          },
-          { where: { id: input_order.id } }
-        );
-        
-        // panalty 여부 판단
-        let cancel_find_result = await db.Cancel.findAll({
-          attributes: [[db.sequelize.fn("count", "*"), "counts"]],
-          where: {
-            userId: req.user.id,
-            createdAt: {
-              [Op.gte]: moment()
-                .subtract(7, "days")
-                .toDate()
-            }
-          }
-        }).catch(err => {
-          console.log(err);
-          res.json({
-            code: -1,
-            result: false
-          });
-        });
-
-        // console.log(cancel_find_result[0].dataValues.counts);
-
-        // 패널티 대상자들
-        if (cancel_find_result[0].dataValues.counts > 5) {
-          await db.User.update(
-            {
-              prohibitTime: moment().format("YYYY-MM-DD HH:mm:ss"),
-              updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
-            },
-            { where: { id: req.user.id } }
-          );
-        }
-
-        // deliverer push 알림
-        let message = {
-          to: input_order.deliver.deliverUser.fcm_token,
-          notification: {
-            title: "운송 취소",
-            body: "발송자가 운송을 취소하였습니다."
-          },
-          data: {
-            title: "cancel_request_user",
-            body: "999",
-            click_action: "FLUTTER_NOTIFICATION_CLICK"
-          }
-        };
-
-        fcm.send(message, (err, response) => {
+      fcm.send(message, (err, response) => {
+        if (err) {
           if (err) {
-            if (err) {
-              console.log(err);
-              res.json({
-                code: -1,
-                err
-              });
-            }
-          } else console.log("Successfully sent with response : ", response);
-        });
+            console.log(err);
+            res.json({
+              code: -1,
+              err
+            });
+          }
+        } else console.log("Successfully sent with response : ", response);
+      });
 
-        if (
-          order_update_result &&
-          customer_payment_result &&
-          deliver_update_result
-        ) {
-          res.json({
-            code: 200
-          });
-        } else {
-          res.json({
-            code: 999,
-            msg: "업데이트중 오류가 발생하였습니다 다시 시도해주세요"
-          });
-        }
+      if (
+        order_update_result &&
+        customer_payment_result &&
+        deliver_update_result
+      ) {
+        res.json({
+          code: 200
+        });
       } else {
+        res.json({
+          code: 999,
+          msg: "업데이트중 오류가 발생하였습니다 다시 시도해주세요"
+        });
+      }
+    } else {
       // 승인 취소 오류시
       res.json({
         code: 999,

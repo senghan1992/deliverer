@@ -8,6 +8,8 @@ const Op = db.Sequelize.Op;
 // login check middleware
 const check = require("../middleware/login_check");
 
+const moment = require("moment");
+
 // 쿠폰 등록하기
 router.post("/", check.loginCheck, (req, res) => {
   // 발급된 쿠폰인지 확인

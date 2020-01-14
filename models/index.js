@@ -18,13 +18,7 @@ sequelize = new Sequelize(
   config.database,
   config.username,
   config.password,
-  config,
-  {
-    host: config.host,
-    dialect: "mysql",
-    logging: false,
-    operatorsAliases: Op,
-  }
+  config
 );
 
 // fs
@@ -58,6 +52,16 @@ db.Cancel = require("./cancel")(sequelize, Sequelize);
 
 db.Order.belongsTo(db.User, { foreignKey: "requestId", constraints: false });
 db.Order.hasOne(db.Deliver);
+db.Order.belongsTo(db.CouponUsage, {
+  foreignKey: "coupon",
+  sourceKey: "id",
+  constraints: false
+});
+db.Order.belongsTo(db.Payment, {
+  foreignKey: "cardName",
+  targetKey: "customer_uid",
+  constraints: false
+});
 // db.Order.belongsTo(db.Deliver, { foreignKey: "id", targetKey: "orderId" });
 
 db.Deliver.belongsTo(db.Order, {

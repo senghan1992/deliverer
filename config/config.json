@@ -18,7 +18,7 @@
       "timestamps": true,
       "timezone": "+09:00"
     },
-    "logging": false,
+    "logging": true,
     "timezone": "+09:00"
   },
   "production": {

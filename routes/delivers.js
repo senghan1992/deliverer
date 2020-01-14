@@ -62,7 +62,7 @@ router.post("/review", (req, res) => {
           {
             star: db.sequelize.literal(`star + ${score}`),
             star_total: db.sequelize.literal(`star_total + 1`),
-            updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+            // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
           { where: { id: requestUserId } }
         )
@@ -72,7 +72,7 @@ router.post("/review", (req, res) => {
               db.Deliver.update(
                 {
                   orderUserReview: "T",
-                  updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
+                  // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
                 },
                 { where: { id: deliverId } }
               )
@@ -323,9 +323,30 @@ router.put("/:id", async (req, res) => {
                 },
                 { where: { id: delivererId } }
               )
-                .then(userResult => {
+                .then(async userResult => {
                   // push 알림
                   // console.log(requestUser_fcmToken);
+                  let tmpOrderData = await db.Order.findOne({
+                    where: { id: orderId },
+                    include: [
+                      {
+                        model: db.Deliver,
+                        include: [
+                          { model: db.User, as: "deliverUser" },
+                          { model: db.User, as: "requestUser" }
+                        ]
+                      },
+                      {
+                        required: false,
+                        model: db.CouponUsage,
+                        include: [{ model: db.Coupon }]
+                      },
+                      {
+                        required: false,
+                        model: db.Payment
+                      }
+                    ]
+                  });
                   let message = {
                     to: requestUser_fcmToken,
                     notification: {
@@ -335,7 +356,7 @@ router.put("/:id", async (req, res) => {
                     },
                     data: {
                       title: "finish",
-                      body: result,
+                      body: tmpOrderData,
                       click_action: "FLUTTER_NOTIFICATION_CLICK"
                     }
                   };
@@ -441,7 +462,20 @@ router.get("/history/finish/:id", (req, res) => {
     include: [
       { model: db.User, as: "requestUser" },
       { model: db.User, as: "deliverUser" },
-      { model: db.Order }
+      {
+        model: db.Order,
+        include: [
+          {
+            required: false,
+            model: db.CouponUsage,
+            include: [{ model: db.Coupon }]
+          },
+          {
+            required: false,
+            model: db.Payment
+          }
+        ]
+      }
     ]
   }).then(result => {
     // console.log(result);
@@ -476,7 +510,7 @@ router.post("/", check.loginCheck, (req, res) => {
       // console.log(order_result);
       const bill_result = await iamporter
         .paySubscription({
-          customer_uid: order_result.cardName,
+          customer_uid: order_result.cardId,
           merchant_uid: merchant_uid,
           amount: order_result.price
         })

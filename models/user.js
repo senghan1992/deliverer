@@ -9,7 +9,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     name: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       comment: "유저 이름"
     },
     birth: {
@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     phone: {
       type: DataTypes.STRING,
-      allowNull: false,
+      allowNull: true,
       comment: "유저 핸드폰 번호 및 아이디 역할"
     },
     gender: {
@@ -92,5 +92,10 @@ module.exports = (sequelize, DataTypes) => {
       type: "TIMESTAMP",
       comment: "패널티 적용 시작 시간"
     },
+    bank_tran_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: "유저 은행거래 고유번호"
+    }
   });
 };

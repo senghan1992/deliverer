@@ -117,6 +117,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: "금액"
     },
+    cardId: {
+      type: DataTypes.STRING(200),
+      allowNull: true,
+      comment: "사용자 카드 id"
+    },
     cardName: {
       type: DataTypes.STRING(200),
       allowNull: true,
