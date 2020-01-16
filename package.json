@@ -27,6 +27,7 @@
     "mysql2": "^1.7.0",
     "nodemailer": "^6.4.2",
     "proj4": "^2.5.0",
+    "querystring": "^0.2.0",
     "request": "^2.88.0",
     "sequelize": "^5.21.1"
   }

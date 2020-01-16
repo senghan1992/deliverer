@@ -34,7 +34,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use(fileUpload());
-app.use(timeout("10s"));
+app.use(timeout("20s"));
 app.use((req, res, next) => {
   if (!req.timedout) next();
   else

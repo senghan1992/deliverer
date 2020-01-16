@@ -83,9 +83,9 @@ module.exports = (sequelize, DataTypes) => {
       comment: "유저 fcm token"
     },
     status: {
-      type: DataTypes.ENUM("A", "D", "F"),
+      type: DataTypes.ENUM("A", "D", "F", "M"),
       allowNull: false,
-      comment: "유저 상태값 A : 활성 / D : 휴면 / F : 탈퇴",
+      comment: "유저 상태값 A : 활성 / D : 휴면 / F : 탈퇴 / M : 관리자",
       defaultValue: "A"
     },
     prohibitTime: {

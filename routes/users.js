@@ -47,7 +47,7 @@ function make_bank_tran_id() {
   var text = "";
   var possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-  for (var i = 0; i < 9; i++)
+  for (var i = 0; i < 3; i++)
     text += possible.charAt(Math.floor(Math.random() * possible.length));
 
   return text;
