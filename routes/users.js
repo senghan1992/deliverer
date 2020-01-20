@@ -592,8 +592,16 @@ router.get("/", check.loginCheck, async (req, res) => {
               order: [["updatedAt", "DESC"]]
             }).then(payment_result => {
               db.CouponUsage.findAll({
-                where: { user_id: req.user.id, is_used: 0 },
-                include: [db.Coupon]
+                where: {
+                  user_id: req.user.id,
+                  is_used: 0
+                },
+                include: [
+                  {
+                    model: db.Coupon,
+                    where: { end_date: { [Op.lt]: moment().format() } }
+                  }
+                ]
               }).then(coupon_result => {
                 res.json({
                   code: 200,
@@ -691,6 +699,11 @@ router.post("/login", (req, res) => {
         res.json({
           code: 600,
           msg: "탈퇴한 회원 고객센터 문의 요망"
+        });
+      } else if (user_result.status == "D") {
+        res.json({
+          code: 601,
+          msg: "휴면 계정입니다 문의 요청"
         });
       } else {
         bcrypt.compare(password, user_result.password).then(result => {

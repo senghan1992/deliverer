@@ -117,6 +117,12 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       comment: "금액"
     },
+    originalPrice: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "할인 전 총 금액"
+    },
     cardId: {
       type: DataTypes.STRING(200),
       allowNull: true,
@@ -142,7 +148,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true,
       comment: "매칭시 주문 번호"
-    },
+    }
     // createdAt: {
     //   type: "TIMESTAMP",
     //   defaultValue: sequelize.literal("CURRENT_TIMESTAMP")
@@ -157,6 +163,6 @@ module.exports = (sequelize, DataTypes) => {
     //   // get() {
     //   //     return moment(this.getDataValue('updatedAt')).format('YYYY/MM/DD');
     //   // }
-    // } 
+    // }
   });
 };

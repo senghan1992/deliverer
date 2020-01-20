@@ -318,7 +318,7 @@ router.put("/:id", async (req, res) => {
               // 딜리버러 수익금 올려주기
               db.User.update(
                 {
-                  price: db.sequelize.literal(`price + ${orderPrice * 0.866}`),
+                  price: db.sequelize.literal(`price + ${result.order.originalPrice * 0.866}`),
                   updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
                 },
                 { where: { id: delivererId } }

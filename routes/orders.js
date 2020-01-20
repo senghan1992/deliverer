@@ -349,6 +349,7 @@ router.post("/", (req, res) => {
   let comments = req.body.comments;
   let status = req.body.status;
   let price = req.body.price;
+  let originalPrice = req.body.originalPrice;
   let cardId = req.body.cardId;
   let cardName = req.body.cardName;
   let coupon = req.body.coupon;
@@ -441,7 +442,7 @@ router.post("/", (req, res) => {
         files[1].name
       : "";
   // console.log('도데체 어디서 걸리는거야 쉬벌');
-  // console.log(pickUpperAddrName);
+  console.log(originalPrice);
   Order.create({
     requestId: requestId,
     pickUpAddrName: pickUpAddrName,
@@ -466,6 +467,7 @@ router.post("/", (req, res) => {
     comments: comments,
     status: status,
     price: price,
+    originalPrice: originalPrice,
     cardId: cardId,
     cardName: cardName,
     coupon: coupon,
