@@ -9,7 +9,7 @@ const Op = db.Sequelize.Op;
 // push notification
 const FCM = require("fcm-node");
 const serverKey =
-  "AAAAtfZmb8Y:APA91bGlfzcggXhLh7JJ-7VVLKNntdHuu70hMZjHZiANDtCorJmu7UzbcRToXshS1wYzRXuouToEhqwOsNazV7zsr5Rl5nTfWuvDLhITyTcjH1_eSDXRkbe8KTFSkLjcFWpQaXl_N6rd";
+  "AAAAqL5WuSU:APA91bHVxSh-YzD2Y65dfimv39rf751Ldzgcxoo4bls68ELLD-oa9EKWDuMCsMiAsOMgidPrc4AtaVm-AOakpRrOCSSXdvGkxMwjBb6uob8HM0-DXMmyBa6X1YqpooWFA7HIVrjm3_XO";
 const fcm = new FCM(serverKey);
 
 // // AWS
@@ -208,10 +208,10 @@ router.get("/history/finish/:id", (req, res) => {
         model: db.CouponUsage,
         include: [{ model: db.Coupon }]
       },
-      {
-        required: false,
-        model: db.Payment
-      }
+      // {
+      //   required: false,
+      //   model: db.Payment
+      // }
     ]
   }).then(result => {
     res.json({

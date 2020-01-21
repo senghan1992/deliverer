@@ -8,7 +8,7 @@ const Op = db.Sequelize.Op;
 // push notification
 const FCM = require("fcm-node");
 const serverKey =
-  "AAAAtfZmb8Y:APA91bGlfzcggXhLh7JJ-7VVLKNntdHuu70hMZjHZiANDtCorJmu7UzbcRToXshS1wYzRXuouToEhqwOsNazV7zsr5Rl5nTfWuvDLhITyTcjH1_eSDXRkbe8KTFSkLjcFWpQaXl_N6rd";
+  "AAAAqL5WuSU:APA91bHVxSh-YzD2Y65dfimv39rf751Ldzgcxoo4bls68ELLD-oa9EKWDuMCsMiAsOMgidPrc4AtaVm-AOakpRrOCSSXdvGkxMwjBb6uob8HM0-DXMmyBa6X1YqpooWFA7HIVrjm3_XO";
 const fcm = new FCM(serverKey);
 
 // // AWS
@@ -61,7 +61,7 @@ router.post("/review", (req, res) => {
         db.User.update(
           {
             star: db.sequelize.literal(`star + ${score}`),
-            star_total: db.sequelize.literal(`star_total + 1`),
+            star_total: db.sequelize.literal(`star_total + 1`)
             // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
           },
           { where: { id: requestUserId } }
@@ -71,7 +71,7 @@ router.post("/review", (req, res) => {
             if (userStarResult) {
               db.Deliver.update(
                 {
-                  orderUserReview: "T",
+                  orderUserReview: "T"
                   // updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
                 },
                 { where: { id: deliverId } }
@@ -182,6 +182,7 @@ router.put("/:id", async (req, res) => {
             fcm.send(message, (err, response) => {
               if (err) {
                 console.log("Something has gone wrong!");
+                console.log(err);
                 res.json({
                   code: -1,
                   err
@@ -316,9 +317,12 @@ router.put("/:id", async (req, res) => {
           )
             .then(orderResult => {
               // 딜리버러 수익금 올려주기
+              // 수익금 계산
+              let priceForDeliver =
+                Math.ceil((result.order.originalPrice * 0.868) / 10) * 10;
               db.User.update(
                 {
-                  price: db.sequelize.literal(`price + ${result.order.originalPrice * 0.866}`),
+                  price: db.sequelize.literal(`price + ${priceForDeliver}`),
                   updatedAt: moment().format("YYYY-MM-DD HH:mm:ss")
                 },
                 { where: { id: delivererId } }
@@ -340,11 +344,11 @@ router.put("/:id", async (req, res) => {
                         required: false,
                         model: db.CouponUsage,
                         include: [{ model: db.Coupon }]
-                      },
-                      {
-                        required: false,
-                        model: db.Payment
                       }
+                      // {
+                      //   required: false,
+                      //   model: db.Payment
+                      // }
                     ]
                   });
                   let message = {
@@ -469,11 +473,11 @@ router.get("/history/finish/:id", (req, res) => {
             required: false,
             model: db.CouponUsage,
             include: [{ model: db.Coupon }]
-          },
-          {
-            required: false,
-            model: db.Payment
           }
+          // {
+          //   required: false,
+          //   model: db.Payment
+          // }
         ]
       }
     ]
@@ -577,8 +581,10 @@ router.post("/", check.loginCheck, (req, res) => {
                         }
                       };
                       fcm.send(message, (err, response) => {
-                        if (err) console.log("Something has gone wrong!");
-                        else
+                        if (err) {
+                          console.log("Something has gone wrong!");
+                          console.log(err);
+                        } else
                           console.log(
                             "Successfully sent with response : ",
                             response

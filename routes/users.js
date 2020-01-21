@@ -391,6 +391,25 @@ router.put("/:id", check.loginCheck, async (req, res) => {
         });
       });
   } else if (kind == "drop") {
+    let order_list = await db.Order.findAll({
+      where: { requestId: userId, status: { [Op.ne]: "F" } }
+    });
+    let deliver_list = await db.Deliver.findAll({
+      where: { delivererId: userId, status: { [Op.ne]: "F" } }
+    });
+
+    console.log(order_list);
+    console.log(deliver_list);
+
+    if (order_list.length > 0 || deliver_list.length > 0) {
+      res.json({
+        code: 400,
+        data: "",
+        msg: "현재 진행중인 물품이 있어 불가합니다"
+      });
+      return;
+    }
+
     db.User.update(
       { status: "F", updatedAt: moment().format("YYYY-MM-DD HH:mm:ss") },
       { where: { id: userId } }
@@ -563,6 +582,13 @@ router.get("/", check.loginCheck, async (req, res) => {
   // fcm token check
   let fcm = req.headers.fcm_token;
   if (result) {
+    if (result.status == "D" || result.status == "F") {
+      res.json({
+        code: 401,
+        data: ""
+      });
+      return;
+    }
     //user update
     if (result.fcm_token != fcm) {
       await db.User.update(
@@ -771,22 +797,34 @@ router.post("/regist", (req, res) => {
     // user 전화번호로 가입 되어 있는 아이디 있는지 확인
     User.findOne({ where: { email: email } }).then(user_email_check_result => {
       if (user_email_check_result) {
-        if (user_email_check_result.status == "A") {
-          res.json({
-            code: 400,
-            msg: "이미 사용중인 이메일입니다 로그인 해 주세요"
-          });
-        }
-        if (user_email_check_result.status == "D") {
-          res.json({
-            code: 400,
-            msg: "이미 사용중인 이베일입니다 로그인 해 주세요"
-          });
-        }
+        // console.log(user_email_check_result.status);
+        // if (user_email_check_result.status == "A") {
+        //   res.json({
+        //     code: 400,
+        //     msg: "이미 사용중인 이메일입니다 로그인 해 주세요"
+        //   });
+        // }
+        // if (user_email_check_result.status == "D") {
+        //   res.json({
+        //     code: 400,
+        //     msg: "이미 사용중인 이베일입니다 로그인 해 주세요"
+        //   });
+        // }
+        // if (user_email_check_result.status == "M") {
+        //   res.json({
+        //     code: 400,
+        //     msg: "이미 사용중인 이베일입니다 로그인 해 주세요"
+        //   });
+        // }
         if (user_email_check_result.status == "F") {
           res.json({
             code: 600,
             msg: "탈퇴한 회원 재가입시 문의 요망"
+          });
+        } else {
+          res.json({
+            code: 400,
+            msg: "이미 사용중인 이베일입니다 로그인 해 주세요"
           });
         }
         return;
