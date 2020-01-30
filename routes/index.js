@@ -21,6 +21,9 @@ router.get('/location', (req,res) => {
 router.get('/person', (req,res) => {
   res.render("person");
 });
+router.get('/marketing', (req,res) => {
+  res.render("marketing");
+});
 router.get('/test', (req,res) => {
   res.render("test");
 });

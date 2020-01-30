@@ -18,6 +18,13 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       allowNull: false,
       comment: "취소한 유저 id"
+    },
+    // 패널티 여부
+    panalty: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: 0,
+      comment: "패널티 적용 캔슬 건 판단"
     }
   });
 };

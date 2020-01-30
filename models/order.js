@@ -92,6 +92,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       comment: "물품 사진 url2"
     },
+    image3: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      comment: "물품 사진 url3"
+    },
     receiverName: {
       type: DataTypes.STRING(100),
       allowNull: false,

@@ -50,6 +50,7 @@ db.CouponUsage = require("./coupon_usage")(sequelize, Sequelize);
 db.CustomerPayment = require("./customer_payment")(sequelize, Sequelize);
 db.Cancel = require("./cancel")(sequelize, Sequelize);
 db.Transfer = require("./transfer")(sequelize, Sequelize);
+db.TmpTransfer = require("./tmp_transfer")(sequelize, Sequelize);
 
 db.Order.belongsTo(db.User, { foreignKey: "requestId", constraints: false });
 db.Order.hasOne(db.Deliver);
@@ -106,6 +107,12 @@ db.Cancel.belongsTo(db.Order, {
   constraints: false
 });
 db.Cancel.belongsTo(db.User, {
+  foreignKey: "userId",
+  constraints: false
+});
+
+// tmp transfer
+db.TmpTransfer.belongsTo(db.User, {
   foreignKey: "userId",
   constraints: false
 });
